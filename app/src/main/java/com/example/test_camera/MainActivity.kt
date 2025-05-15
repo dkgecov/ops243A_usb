@@ -62,43 +62,13 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.math.abs
 
-data class InferenceResult(
-    val classification: Map<String, Float>?,   // Classification labels and values
-    val objectDetections: List<BoundingBox>?,  // Object detection results
-    val visualAnomalyGridCells: List<BoundingBox>?, //TODO not used ? Visual anomaly grid
-    val anomalyResult: Map<String, Float>?, // Anomaly values
-    val timing: Timing  // Timing information
-)
-
-data class BoundingBox(
-    val label: String,
-    val confidence: Float,
-    val x: Int,
-    val y: Int,
-    val width: Int,
-    val height: Int
-)
-
-data class Timing(
-    val sampling: Int,
-    val dsp: Int,
-    val classification: Int,
-    val anomaly: Int,
-    val dsp_us: Long,
-    val classification_us: Long,
-    val anomaly_us: Long
-)
-
-private const val CAMERA_PERMISSION_REQUEST_CODE = 1001
-
-
-
 class MainActivity : ComponentActivity() {
     private var lastCaptureTime = 0L
     private val uiHandler: Handler = Handler(Looper.getMainLooper())
     private lateinit var imageCapture: ImageCapture
     private lateinit var videoCapture: VideoCapture<Recorder>
      val updateIntervalMs = 150L // n updates/second
+    private  val CAMERA_PERMISSION_REQUEST_CODE = 1001
     @Volatile
     private var updateScheduled = false
     private lateinit var binding: ActivityMainBinding
