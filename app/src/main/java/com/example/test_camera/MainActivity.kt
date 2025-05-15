@@ -29,6 +29,7 @@ import android.view.View
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.annotation.RequiresPermission
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
@@ -36,6 +37,10 @@ import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.video.FileOutputOptions
+import androidx.camera.video.Recorder
+import androidx.camera.video.VideoCapture
+import androidx.camera.video.VideoRecordEvent
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -144,6 +149,7 @@ class MainActivity : ComponentActivity() {
     private var lastCaptureTime = 0L
     private val uiHandler: Handler = Handler(Looper.getMainLooper())
     private lateinit var imageCapture: ImageCapture
+    private lateinit var videoCapture: VideoCapture<Recorder>
      val updateIntervalMs = 150L // n updates/second
     @Volatile
     private var updateScheduled = false
@@ -227,13 +233,38 @@ class MainActivity : ComponentActivity() {
                 height = previewView.height
             }
         }
-        prepareUsbDeviceListeners()
+
         if (!hasCameraPermission()) {
             requestCameraPermission()
         } else {
             startCamera()
         }
+        prepareUsbDeviceListeners()// should be after camera started because it can trigger image capture if
+    // the sensor permission is granted and it detects speeder
 
+    }
+    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
+    private fun startVideoRecording() {
+        val name = "VID_${System.currentTimeMillis()}.mp4"
+        val file = File(getOutputDirectory(), name)
+
+        val outputOptions = FileOutputOptions.Builder(file).build()
+
+        val recording = videoCapture.output
+            .prepareRecording(this, outputOptions)
+            .withAudioEnabled() // Optional
+            .start(ContextCompat.getMainExecutor(this)) { recordEvent ->
+                if (recordEvent is VideoRecordEvent.Start) {
+                    Log.d("CameraX", "Video recording started")
+                } else if (recordEvent is VideoRecordEvent.Finalize) {
+                    Log.d("CameraX", "Video saved: ${file.absolutePath}")
+                }
+            }
+
+        // Stop after 5 seconds
+        Handler(Looper.getMainLooper()).postDelayed({
+            recording.stop()
+        }, 5000)
     }
     private fun takePhoto(speed: Float) {
         val photoFile = File(getOutputDirectory(), "IMG_${System.currentTimeMillis()}.jpg")
@@ -522,7 +553,7 @@ class MainActivity : ComponentActivity() {
                         val speed = latestValue.toFloatOrNull()
                         val now = System.currentTimeMillis()
 
-                        if (speed != null && abs(speed) > 50f && now - lastCaptureTime > 5000) {
+                        if (speed != null && abs(speed) > 5f && now - lastCaptureTime > 5000) {
                             lastCaptureTime = now
                             takePhoto(speed)
                         }
