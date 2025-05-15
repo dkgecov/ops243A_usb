@@ -15,6 +15,7 @@ import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Rect
+import android.graphics.Typeface
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbManager
@@ -26,9 +27,12 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.View
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -43,9 +47,15 @@ import com.hoho.android.usbserial.driver.UsbSerialProber
 import com.hoho.android.usbserial.util.SerialInputOutputManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import kotlin.math.abs
 
 data class InferenceResult(
     val classification: Map<String, Float>?,   // Classification labels and values
@@ -131,8 +141,9 @@ class BoundingBoxOverlay(context: Context, attrs: AttributeSet? = null) : View(c
 }
 
 class MainActivity : ComponentActivity() {
-
+    private var lastCaptureTime = 0L
     private val uiHandler: Handler = Handler(Looper.getMainLooper())
+    private lateinit var imageCapture: ImageCapture
      val updateIntervalMs = 150L // n updates/second
     @Volatile
     private var updateScheduled = false
@@ -143,6 +154,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var errorTextView: TextView
     private lateinit var boundingBoxOverlay: BoundingBoxOverlay
     private var ACTION_USB_PERMISSION: String = "com.example.test_camera.USB_PERMISSION"
+    val executor = Executors.newSingleThreadExecutor()
 
     private val usbReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -223,7 +235,74 @@ class MainActivity : ComponentActivity() {
         }
 
     }
+    private fun takePhoto(speed: Float) {
+        val photoFile = File(getOutputDirectory(), "IMG_${System.currentTimeMillis()}.jpg")
 
+        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+
+        imageCapture.takePicture(
+            outputOptions,
+            executor, // ✅ Runs on a background thread
+            object : ImageCapture.OnImageSavedCallback {
+                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                    try {
+                        // Stamp the photo (heavy work is safe here)
+                        val stampedFile = stampImageWithText(photoFile, speed.toString())
+                        Log.d("Stamping", "Stamped image saved to: ${stampedFile.absolutePath}")
+
+                        // Optional: show success on UI
+                       // Handler(Looper.getMainLooper()).post {
+                        //    Toast.makeText(this@YourActivityName, "Photo stamped!", Toast.LENGTH_SHORT).show()
+                       // }
+
+                    } catch (e: Exception) {
+                        Log.e("Stamping", "Failed to stamp image: ${e.message}", e)
+                    }
+                }
+
+                override fun onError(exception: ImageCaptureException) {
+                    Log.e("CameraX", "Photo capture failed: ${exception.message}", exception)
+                }
+            }
+        )
+    }
+    fun stampImageWithText(
+        originalFile: File,
+        speed: String
+    ): File {
+        // Load original image
+        val originalBitmap = BitmapFactory.decodeFile(originalFile.absolutePath)
+        val mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
+
+        val canvas = Canvas(mutableBitmap)
+        val paint = Paint().apply {
+            color = Color.RED
+            textSize = 128f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            setShadowLayer(2f, 2f, 2f, Color.BLACK)
+        }
+
+        val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
+        val text = "Speed: $speed km/h\n$timestamp"
+
+        // Draw text on bottom left
+        canvas.drawText(text, 40f, mutableBitmap.height - 80f, paint)
+
+        // Overwrite the original file or create a new one
+        val stampedFile = File(originalFile.parent, "STAMPED_${originalFile.name}")
+        FileOutputStream(stampedFile).use { out ->
+            mutableBitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
+        }
+
+        return stampedFile
+    }
+    private fun getOutputDirectory(): File {
+        val mediaDir = externalMediaDirs.firstOrNull()?.let {
+            File(it, resources.getString(R.string.app_name)).apply { mkdirs() }
+        }
+        return if (mediaDir != null && mediaDir.exists())
+            mediaDir else filesDir
+    }
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
         cameraProviderFuture.addListener({
@@ -231,13 +310,14 @@ class MainActivity : ComponentActivity() {
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
             val preview = Preview.Builder().build()
             preview.setSurfaceProvider(previewView.surfaceProvider)
+            imageCapture = ImageCapture.Builder().build() // Add this for image capture
             val imageAnalysis = ImageAnalysis.Builder().build()
 
             imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
                 processImage(imageProxy)
             }
 
-            cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis)
+            cameraProvider.bindToLifecycle(this, cameraSelector, preview,imageCapture, imageAnalysis)
         }, ContextCompat.getMainExecutor(this))
     }
 
@@ -425,21 +505,31 @@ class MainActivity : ComponentActivity() {
         }
         val listener: SerialInputOutputManager.Listener = object :SerialInputOutputManager.Listener {
             override fun onNewData(newData: ByteArray?) {
-
                 if (!updateScheduled) {
-                    updateScheduled = true
-                        val latestValue =  newData!!.toString(Charsets.UTF_8)
-                        if(!isDigitOrMinus(latestValue.first())){
-                            updateScheduled = false
-                            return
-                        }
-                    uiHandler.postDelayed({
-                        Log.d("Throttler post delayed",latestValue)
-                        speedTextView.text = latestValue
-                        updateScheduled = false
-                    }, updateIntervalMs)
-                }
+                    val latestValue = newData!!.toString(Charsets.UTF_8)
 
+                    if (!isDigitOrMinus(latestValue.first())) {
+                        return
+                    }
+
+                    updateScheduled = true//TODO check again timing
+
+                    uiHandler.post({
+                        Log.d("Throttler post delayed", latestValue)
+
+                        speedTextView.text = latestValue
+
+                        val speed = latestValue.toFloatOrNull()
+                        val now = System.currentTimeMillis()
+
+                        if (speed != null && abs(speed) > 50f && now - lastCaptureTime > 5000) {
+                            lastCaptureTime = now
+                            takePhoto(speed)
+                        }
+
+                        updateScheduled = false
+                    })
+                }
             }
             override fun onRunError(e: Exception?) {
             }
