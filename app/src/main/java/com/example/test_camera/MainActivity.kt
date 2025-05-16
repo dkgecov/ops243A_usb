@@ -14,7 +14,6 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Paint
-import android.graphics.Rect
 import android.graphics.Typeface
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbDeviceConnection
@@ -23,11 +22,9 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.service.controls.ControlsProviderService.TAG
-import android.util.AttributeSet
 import android.util.Log
 import android.view.View
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.annotation.RequiresPermission
 import androidx.camera.core.CameraSelector
@@ -38,6 +35,8 @@ import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.video.FileOutputOptions
+import androidx.camera.video.Quality
+import androidx.camera.video.QualitySelector
 import androidx.camera.video.Recorder
 import androidx.camera.video.VideoCapture
 import androidx.camera.video.VideoRecordEvent
@@ -75,7 +74,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var resultTextView: TextView
     private lateinit var speedTextView: TextView
     private lateinit var previewView: PreviewView
-    private lateinit var errorTextView: TextView
+    private lateinit var infoTextView: TextView
     private lateinit var boundingBoxOverlay: BoundingBoxOverlay
     private var ACTION_USB_PERMISSION: String = "com.example.test_camera.USB_PERMISSION"
     val executor = Executors.newSingleThreadExecutor()
@@ -91,7 +90,7 @@ class MainActivity : ComponentActivity() {
                     val permissionGranted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
 
                     if (permissionGranted && device != null) {
-                        uiHandler.postDelayed({errorTextView.visibility=View.GONE},1500)
+                        uiHandler.postDelayed({infoTextView.visibility=View.GONE},1000)
                         val driver = UsbSerialProber.getDefaultProber().probeDevice(device)
                         val connection = manager.openDevice(device)
                         if (driver != null && connection != null) {
@@ -114,14 +113,14 @@ class MainActivity : ComponentActivity() {
                         )
                         manager.requestPermission(device, permissionIntent)
                     }
-                    errorTextView.visibility=View.VISIBLE
-                    errorTextView.text="USB device attached"
+                    infoTextView.visibility=View.VISIBLE
+                    infoTextView.text="USB device attached"
                     //uiHandler.postDelayed({errorTextView.visibility=View.GONE},1500)
                 }
 
                 UsbManager.ACTION_USB_DEVICE_DETACHED -> {
-                    errorTextView.visibility=View.VISIBLE
-                    errorTextView.text="USB device detached"
+                    infoTextView.visibility=View.VISIBLE
+                    infoTextView.text="USB device detached"
                     Log.d(TAG, "USB device detached")
                     // Optional: Clean up resources here
                 }
@@ -140,9 +139,9 @@ class MainActivity : ComponentActivity() {
         resultTextView = findViewById(R.id.resultTextView) // Result TextView
         previewView = findViewById(R.id.previewView) // Camera preview view
         boundingBoxOverlay = findViewById(R.id.boundingBoxOverlay) // overlay for boxes / visual ad
-        this.speedTextView = findViewById<TextView>(R.id.speed_field)
-        errorTextView=findViewById(R.id.errrorTextView)
-        errorTextView.visibility=View.GONE
+        speedTextView = findViewById(R.id.speed_field)
+        infoTextView=findViewById(R.id.errrorTextView)
+        infoTextView.visibility=View.GONE
 
         // Set overlay size to match PreviewView
         previewView.post {
@@ -254,19 +253,46 @@ class MainActivity : ComponentActivity() {
     }
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-            val preview = Preview.Builder().build()
-            preview.setSurfaceProvider(previewView.surfaceProvider)
-            imageCapture = ImageCapture.Builder().build() // Add this for image capture
-            val imageAnalysis = ImageAnalysis.Builder().build()
 
-            imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
-                processImage(imageProxy)
+            // ✅ Unbind all previously bound use cases
+            cameraProvider.unbindAll()
+
+            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+            // Preview use case
+            val preview = Preview.Builder().build().also {
+                it.setSurfaceProvider(previewView.surfaceProvider)
             }
 
-            cameraProvider.bindToLifecycle(this, cameraSelector, preview,imageCapture, imageAnalysis)
+            // Image capture use case
+            imageCapture = ImageCapture.Builder().build()
+
+            // Video capture use case
+            val recorder = Recorder.Builder()
+                .setQualitySelector(QualitySelector.from(Quality.HIGHEST))
+                .build()
+            videoCapture = VideoCapture.withOutput(recorder)
+
+            // Optional image analysis use case
+            val imageAnalysis = ImageAnalysis.Builder().build().also {
+                it.setAnalyzer(cameraExecutor) { imageProxy ->
+                    processImage(imageProxy)
+                }
+            }
+
+            // Bind all use cases to lifecycle
+            cameraProvider.bindToLifecycle(
+                this,
+                cameraSelector,
+                preview,
+                imageCapture,
+                videoCapture,
+                imageAnalysis
+            )
+
         }, ContextCompat.getMainExecutor(this))
     }
 
@@ -314,6 +340,7 @@ class MainActivity : ComponentActivity() {
     }
 
     // Convert ImageProxy to Bitmap
+    //TODO check with original inference project
     private fun ImageProxy.toBitmap(): Bitmap {
         val planes = this.planes
         val buffer = planes[0].buffer
@@ -432,8 +459,8 @@ class MainActivity : ComponentActivity() {
 
         val deviceList = manager.deviceList
         if (deviceList.isEmpty()) {
-            errorTextView.visibility=View.VISIBLE
-            errorTextView.text = "No USB device found"
+            infoTextView.visibility=View.VISIBLE
+            infoTextView.text = "No USB device found"
             return
         }
     }
