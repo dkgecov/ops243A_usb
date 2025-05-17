@@ -31,12 +31,13 @@ import java.util.Date
 import java.util.Locale
 import java.util.concurrent.Executors
 
-class ImageProcessor (private val imageCapture: ImageCapture,
-                      private val videoCapture: VideoCapture<Recorder>
+class ImageProcessor (private val imageCapture: ImageCapture
+
 
 
 ) {
-    val executor = Executors.newSingleThreadExecutor()
+    val photoExecutor = Executors.newSingleThreadExecutor()
+
     fun takePhoto(speed: Float,outputDir: File) {
         val photoFile = File(outputDir, "IMG_${System.currentTimeMillis()}.jpg")
 
@@ -44,7 +45,7 @@ class ImageProcessor (private val imageCapture: ImageCapture,
 
         imageCapture.takePicture(
             outputOptions,
-            Executors.newSingleThreadExecutor(), // ✅ Runs on a background thread
+            photoExecutor, // ✅ Runs on a background thread
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     try {
@@ -99,7 +100,7 @@ class ImageProcessor (private val imageCapture: ImageCapture,
         return rgbByteArray
     }
     // Process the captured image
-    private fun processImage(imageProxy: ImageProxy) {
+     fun processImage(imageProxy: ImageProxy) {
         // Convert ImageProxy to Bitmap
         val bitmap = imageProxy.toBitmap()
 
@@ -152,28 +153,6 @@ class ImageProcessor (private val imageCapture: ImageCapture,
 
         return stampedFile
     }
-    @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    private fun startVideoRecording(outputDir:File,context: Context) {
-        val name = "VID_${System.currentTimeMillis()}.mp4"
-        val file = File(outputDir, name)
 
-        val outputOptions = FileOutputOptions.Builder(file).build()
-
-        val recording = videoCapture.output
-            .prepareRecording(context, outputOptions)
-            .withAudioEnabled() // Optional
-            .start( executor) { recordEvent ->
-                if (recordEvent is VideoRecordEvent.Start) {
-                    Log.d("CameraX", "Video recording started")
-                } else if (recordEvent is VideoRecordEvent.Finalize) {
-                    Log.d("CameraX", "Video saved: ${file.absolutePath}")
-                }
-            }
-
-        // Stop after 5 seconds
-        Handler(Looper.getMainLooper()).postDelayed({
-            recording.stop()
-        }, 5000)
-    }
 
 }
