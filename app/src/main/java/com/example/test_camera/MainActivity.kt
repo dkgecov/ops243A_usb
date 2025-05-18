@@ -125,7 +125,7 @@ class MainActivity : ComponentActivity() {
             // Start camera
             cameraServiceImpl.startCamera(previewView)
         }
-       // prepareUsbDeviceListeners()// TODO check again should be after camera started because it can trigger image capture if
+
         val usbDeviceInitializer = UsbDeviceInitializer(
             context = this,
             usbReceiver = usbReceiver,
@@ -292,25 +292,6 @@ class MainActivity : ComponentActivity() {
         System.loadLibrary("test_camera")
     }
 
-    private fun prepareUsbDeviceListeners(){
-        val filter = IntentFilter(ACTION_USB_PERMISSION)
-        registerReceiver(usbReceiver, filter,RECEIVER_EXPORTED)
-
-        val attachFilter = IntentFilter(UsbManager.ACTION_USB_DEVICE_ATTACHED)
-        val detachFilter = IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED)
-        registerReceiver(usbReceiver, attachFilter, RECEIVER_EXPORTED)
-        registerReceiver(usbReceiver, detachFilter, RECEIVER_EXPORTED)
-
-        //end of register receiver
-        val manager = getSystemService(USB_SERVICE) as UsbManager
-
-        val deviceList = manager.deviceList
-        if (deviceList.isEmpty()) {
-            infoTextView.visibility=View.VISIBLE
-            infoTextView.text = "No USB device found"
-            return
-        }
-    }
     private fun onPermission2(usbManager:UsbManager, usbDevice: UsbDevice){
         Thread {
             try {
@@ -322,7 +303,7 @@ class MainActivity : ComponentActivity() {
                     },
                     onPhotoTrigger = { speed ->
                         lastCaptureTime = System.currentTimeMillis()
-                        cameraServiceImpl.takePhoto(speed, getOutputDirectory())
+                        cameraServiceImpl.takePhoto(speed)
                     }
                 )
 

@@ -76,22 +76,22 @@ class CameraServiceImpl(
                     videoCapture,
                     imageAnalysis
                 )
-                imageProcessor = ImageProcessor(imageCapture,sharedExecutor)
-                videoProcessor = VideoProcessor(videoCapture, context,sharedExecutor)
+                imageProcessor = ImageProcessor(imageCapture,sharedExecutor,context)
+                videoProcessor = VideoProcessor(videoCapture,sharedExecutor,context)
                 Log.d("CameraManager", "Camera initialized successfully")
 
             }, ContextCompat.getMainExecutor(context))
         }
 
-    override fun takePhoto(speed:Float,outputDir: File) {
+    override fun takePhoto(speed:Float) {
         check(::imageProcessor.isInitialized) { "Camera not started. Call startCamera() first." }
-        imageProcessor.takePhoto(speed,outputDir)
+        imageProcessor.takePhoto(speed)
     }
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
     override fun startRecording(outputDir: File) {
         check(::videoProcessor.isInitialized) { "Camera not started. Call startCamera() first." }
-        videoProcessor.startVideoRecording(outputDir)
+        videoProcessor.startVideoRecording()
     }
 
     override fun stopRecording() {
