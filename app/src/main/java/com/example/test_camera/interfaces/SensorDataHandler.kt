@@ -1,4 +1,4 @@
-package com.example.test_camera
+package com.example.test_camera.interfaces
 
 interface SensorDataHandler {
 

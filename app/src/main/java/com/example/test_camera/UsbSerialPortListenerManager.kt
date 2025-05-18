@@ -1,6 +1,7 @@
 package com.example.test_camera
 
 import android.util.Log
+import com.example.test_camera.interfaces.SensorDataHandler
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.util.SerialInputOutputManager
 

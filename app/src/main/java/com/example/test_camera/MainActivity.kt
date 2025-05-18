@@ -40,12 +40,9 @@ import kotlin.math.abs
 class MainActivity : ComponentActivity() {
     private var lastCaptureTime = 0L
     private val uiHandler: Handler = Handler(Looper.getMainLooper())
-    private lateinit var imageCapture: ImageCapture
-    private lateinit var videoCapture: VideoCapture<Recorder>
     private lateinit var cameraServiceImpl: CameraServiceImpl
     private  val CAMERA_PERMISSION_REQUEST_CODE = 1001
     @Volatile
-    private var updateScheduled = false
     private lateinit var binding: ActivityMainBinding
     private lateinit var resultTextView: TextView
     private lateinit var speedTextView: TextView
@@ -53,7 +50,6 @@ class MainActivity : ComponentActivity() {
     private lateinit var infoTextView: TextView
     private lateinit var boundingBoxOverlay: BoundingBoxOverlay
     private var ACTION_USB_PERMISSION: String = "com.example.test_camera.USB_PERMISSION"
-    val executor = Executors.newSingleThreadExecutor()
 
     private val usbReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -129,8 +125,17 @@ class MainActivity : ComponentActivity() {
             // Start camera
             cameraServiceImpl.startCamera(previewView)
         }
-        prepareUsbDeviceListeners()// TODO check again should be after camera started because it can trigger image capture if
-    // the sensor permission is granted and it detects speeder
+       // prepareUsbDeviceListeners()// TODO check again should be after camera started because it can trigger image capture if
+        val usbDeviceInitializer = UsbDeviceInitializer(
+            context = this,
+            usbReceiver = usbReceiver,
+            onNoUsbDevice = {
+                infoTextView.visibility = View.VISIBLE
+                infoTextView.text = "No USB device found"
+            }
+        )
+
+        usbDeviceInitializer.initialize(ACTION_USB_PERMISSION)
 
     }
     private fun getOutputDirectory(): File {
@@ -288,9 +293,6 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun prepareUsbDeviceListeners(){
-
-        val intent = Intent(ACTION_USB_PERMISSION)
-        intent.setPackage(packageName)
         val filter = IntentFilter(ACTION_USB_PERMISSION)
         registerReceiver(usbReceiver, filter,RECEIVER_EXPORTED)
 
@@ -334,53 +336,10 @@ class MainActivity : ComponentActivity() {
             }
         }.start()
     }
-   /* private fun onPermission (driver: UsbSerialDriver, connection: UsbDeviceConnection){
-        val port: UsbSerialPort =
-        driver.getPorts().get(0) // Most devices have just one port (port 0)
-
-        try {
-            port.open(connection)
-        } catch (e: IOException) {
-            throw RuntimeException(e)
-        }
-        try {
-            port.setParameters(115200, 8, UsbSerialPort.STOPBITS_1, UsbSerialPort.PARITY_NONE)
-        } catch (e: IOException) {
-            throw RuntimeException(e)
-        }
-        val listener: SerialInputOutputManager.Listener = object :SerialInputOutputManager.Listener {
-            override fun onNewData(newData: ByteArray?) {
-                if (!updateScheduled) {
-                    val latestValue = newData!!.toString(Charsets.UTF_8)
-                    if (!isDigitOrMinus(latestValue.first())) {
-                        return
-                    }
-                    val now = System.currentTimeMillis()
-                    val speed = latestValue.toFloatOrNull()
-                    if (speed != null && abs(speed) > 5f && now - lastCaptureTime > 5000) {
-                        lastCaptureTime = now
-                        cameraManagerImpl.takePhoto(speed,getOutputDirectory())
-                    }
-                    updateScheduled = true//TODO check again timing
-                    uiHandler.post({
-                        Log.d("Throttler post delayed", latestValue)
-                        speedTextView.text = latestValue
-                        updateScheduled = false
-                    })
-
-                }
-            }
-            override fun onRunError(e: Exception?) {
-            }
-            fun isDigitOrMinus(char: Char): Boolean {
-                return char.isDigit() || char == '-'
-            }
-        }
-        val usbIoManager = SerialInputOutputManager(port, listener)
-        usbIoManager.start()
-    }*/
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(usbReceiver)
+       cameraServiceImpl.close() // ✅ Clean up executor
     }
+
 }

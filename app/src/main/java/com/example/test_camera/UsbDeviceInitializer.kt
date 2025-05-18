@@ -1,0 +1,41 @@
+package com.example.test_camera
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.IntentFilter
+import android.hardware.usb.UsbManager
+
+class UsbDeviceInitializer(
+    private val context: Context,
+    private val usbReceiver: BroadcastReceiver,
+    private val onNoUsbDevice: () -> Unit
+) {
+
+    private val usbManager = context.getSystemService(Context.USB_SERVICE) as UsbManager
+
+    fun initialize(usbPermissionAction: String) {
+        registerReceivers(usbPermissionAction)
+        checkConnectedDevices()
+    }
+
+    private fun registerReceivers(usbPermissionAction: String) {
+        val usbPermissionFilter = IntentFilter(usbPermissionAction)
+        val attachFilter = IntentFilter(UsbManager.ACTION_USB_DEVICE_ATTACHED)
+        val detachFilter = IntentFilter(UsbManager.ACTION_USB_DEVICE_DETACHED)
+
+        context.registerReceiver(usbReceiver, usbPermissionFilter, Context.RECEIVER_EXPORTED)
+        context.registerReceiver(usbReceiver, attachFilter, Context.RECEIVER_EXPORTED)
+        context.registerReceiver(usbReceiver, detachFilter, Context.RECEIVER_EXPORTED)
+    }
+
+    private fun checkConnectedDevices() {
+        val deviceList = usbManager.deviceList
+        if (deviceList.isEmpty()) {
+            onNoUsbDevice()
+        }
+    }
+
+    fun unregister() {
+        context.unregisterReceiver(usbReceiver)
+    }
+}

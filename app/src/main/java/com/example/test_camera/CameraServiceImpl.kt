@@ -16,6 +16,8 @@ import androidx.camera.video.VideoCapture
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import com.example.test_camera.interfaces.CameraService
+import java.io.Closeable
 import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -25,12 +27,13 @@ class CameraServiceImpl(
         private val context: Context,
         private val lifecycleOwner: LifecycleOwner,
 
-    ) : CameraService{
+    ) : CameraService, Closeable{
         private lateinit var imageCapture: ImageCapture
         private lateinit var videoCapture: VideoCapture<Recorder>
         private val analyzeImageExecutor: ExecutorService = Executors.newSingleThreadExecutor()
     private lateinit var imageProcessor: ImageProcessor
     private lateinit var videoProcessor: VideoProcessor
+    private val sharedExecutor = Executors.newSingleThreadExecutor()
 
          override fun startCamera(previewView: PreviewView) {
             val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
@@ -73,8 +76,8 @@ class CameraServiceImpl(
                     videoCapture,
                     imageAnalysis
                 )
-                imageProcessor = ImageProcessor(imageCapture)
-                videoProcessor = VideoProcessor(videoCapture, context)
+                imageProcessor = ImageProcessor(imageCapture,sharedExecutor)
+                videoProcessor = VideoProcessor(videoCapture, context,sharedExecutor)
                 Log.d("CameraManager", "Camera initialized successfully")
 
             }, ContextCompat.getMainExecutor(context))
@@ -94,4 +97,8 @@ class CameraServiceImpl(
     override fun stopRecording() {
        // videoProcessor.stopRecording()
     }
+
+    override fun close() {
+       sharedExecutor.shutdown()
     }
+}

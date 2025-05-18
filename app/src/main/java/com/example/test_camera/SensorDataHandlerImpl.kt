@@ -1,6 +1,7 @@
 package com.example.test_camera
 
 import android.os.Handler
+import com.example.test_camera.interfaces.SensorDataHandler
 
 class SensorDataHandlerImpl (//TODO rename to ...HandlerSerialPort
     private val uiHandler: Handler,

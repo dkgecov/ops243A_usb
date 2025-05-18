@@ -1,4 +1,4 @@
-package com.example.test_camera
+package com.example.test_camera.interfaces
 
 import androidx.camera.view.PreviewView
 import java.io.File

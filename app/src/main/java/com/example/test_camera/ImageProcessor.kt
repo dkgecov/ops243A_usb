@@ -29,16 +29,13 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-class ImageProcessor (private val imageCapture: ImageCapture
-
-
-
+class ImageProcessor (private val imageCapture: ImageCapture,private val imageProcessingExecutor: ExecutorService
 ) {
-    val imageProcessingExecutor  = Executors.newSingleThreadExecutor()
 
-    fun takePhoto(speed: Float,outputDir: File) {
+    fun takePhoto(speed: Float,outputDir: File) {// todo outputDir, from where to pass??
         val photoFile = File(outputDir, "IMG_${System.currentTimeMillis()}.jpg")
 
         val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
