@@ -10,13 +10,8 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Matrix
-import android.graphics.Paint
-import android.graphics.Typeface
 import android.hardware.usb.UsbDevice
-import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbManager
 import android.os.Bundle
 import android.os.Handler
@@ -26,14 +21,8 @@ import android.util.Log
 import android.view.View
 import android.widget.TextView
 import androidx.activity.ComponentActivity
-import androidx.camera.core.CameraSelector
-import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageProxy
-import androidx.camera.core.Preview
-import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.video.Quality
-import androidx.camera.video.QualitySelector
 import androidx.camera.video.Recorder
 import androidx.camera.video.VideoCapture
 import androidx.camera.view.PreviewView
@@ -41,18 +30,9 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.test_camera.databinding.ActivityMainBinding
-import com.hoho.android.usbserial.driver.UsbSerialDriver
-import com.hoho.android.usbserial.driver.UsbSerialPort
-import com.hoho.android.usbserial.driver.UsbSerialProber
-import com.hoho.android.usbserial.util.SerialInputOutputManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.math.abs
@@ -62,7 +42,7 @@ class MainActivity : ComponentActivity() {
     private val uiHandler: Handler = Handler(Looper.getMainLooper())
     private lateinit var imageCapture: ImageCapture
     private lateinit var videoCapture: VideoCapture<Recorder>
-    private lateinit var cameraManagerImpl: CameraManagerImpl
+    private lateinit var cameraServiceImpl: CameraServiceImpl
     private  val CAMERA_PERMISSION_REQUEST_CODE = 1001
     @Volatile
     private var updateScheduled = false
@@ -87,13 +67,7 @@ class MainActivity : ComponentActivity() {
 
                     if (permissionGranted && device != null) {
                         uiHandler.postDelayed({infoTextView.visibility=View.GONE},1000)
-                        val driver = UsbSerialProber.getDefaultProber().probeDevice(device)
-                        val connection = manager.openDevice(device)
-                        if (driver != null && connection != null) {
-                            onPermission(driver, connection)
-                        } else {
-                            Log.e(TAG, "Driver or connection is null after permission")
-                        }
+                            onPermission2(manager, device)
                     } else {
                         Log.d(TAG, "Permission denied for device: $device")
                     }
@@ -131,14 +105,12 @@ class MainActivity : ComponentActivity() {
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
         resultTextView = findViewById(R.id.resultTextView) // Result TextView
         previewView = findViewById(R.id.previewView) // Camera preview view
         boundingBoxOverlay = findViewById(R.id.boundingBoxOverlay) // overlay for boxes / visual ad
         speedTextView = findViewById(R.id.speed_field)
         infoTextView=findViewById(R.id.errrorTextView)
         infoTextView.visibility=View.GONE
-
         // Set overlay size to match PreviewView
         previewView.post {
             boundingBoxOverlay.layoutParams = boundingBoxOverlay.layoutParams.apply {
@@ -147,83 +119,19 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        cameraServiceImpl = CameraServiceImpl(
+            context = this,             // MainActivity is a Context
+            lifecycleOwner = this       // MainActivity is also a LifecycleOwner
+        )
         if (!hasCameraPermission()) {
             requestCameraPermission()
         } else {
-            cameraManagerImpl = CameraManagerImpl(
-                context = this,             // MainActivity is a Context
-                lifecycleOwner = this       // MainActivity is also a LifecycleOwner
-            )
-
             // Start camera
-            cameraManagerImpl.startCamera(previewView)
-           // startCamera()
+            cameraServiceImpl.startCamera(previewView)
         }
-        prepareUsbDeviceListeners()// should be after camera started because it can trigger image capture if
+        prepareUsbDeviceListeners()// TODO check again should be after camera started because it can trigger image capture if
     // the sensor permission is granted and it detects speeder
 
-    }
-
-   /* private fun takePhoto(speed: Float) {
-        val photoFile = File(getOutputDirectory(), "IMG_${System.currentTimeMillis()}.jpg")
-
-        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
-
-        imageCapture.takePicture(
-            outputOptions,
-            executor, // ✅ Runs on a background thread
-            object : ImageCapture.OnImageSavedCallback {
-                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    try {
-                        // Stamp the photo (heavy work is safe here)
-                        val stampedFile = stampImageWithText(photoFile, speed.toString())
-                        Log.d("Stamping", "Stamped image saved to: ${stampedFile.absolutePath}")
-
-                        // Optional: show success on UI
-                       // Handler(Looper.getMainLooper()).post {
-                        //    Toast.makeText(this@YourActivityName, "Photo stamped!", Toast.LENGTH_SHORT).show()
-                       // }
-
-                    } catch (e: Exception) {
-                        Log.e("Stamping", "Failed to stamp image: ${e.message}", e)
-                    }
-                }
-
-                override fun onError(exception: ImageCaptureException) {
-                    Log.e("CameraX", "Photo capture failed: ${exception.message}", exception)
-                }
-            }
-        )
-    }*/
-    fun stampImageWithText(
-        originalFile: File,
-        speed: String
-    ): File {
-        // Load original image
-        val originalBitmap = BitmapFactory.decodeFile(originalFile.absolutePath)
-        val mutableBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true)
-
-        val canvas = Canvas(mutableBitmap)
-        val paint = Paint().apply {
-            color = Color.RED
-            textSize = 128f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            setShadowLayer(2f, 2f, 2f, Color.BLACK)
-        }
-
-        val timestamp = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())
-        val text = "Speed: $speed km/h\n$timestamp"
-
-        // Draw text on bottom left
-        canvas.drawText(text, 40f, mutableBitmap.height - 80f, paint)
-
-        // Overwrite the original file or create a new one
-        val stampedFile = File(originalFile.parent, "STAMPED_${originalFile.name}")
-        FileOutputStream(stampedFile).use { out ->
-            mutableBitmap.compress(Bitmap.CompressFormat.JPEG, 100, out)
-        }
-
-        return stampedFile
     }
     private fun getOutputDirectory(): File {
         val mediaDir = externalMediaDirs.firstOrNull()?.let {
@@ -231,50 +139,6 @@ class MainActivity : ComponentActivity() {
         }
         return if (mediaDir != null && mediaDir.exists())
             mediaDir else filesDir
-    }
-    private fun startCamera() {
-        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
-
-        cameraProviderFuture.addListener({
-            val cameraProvider = cameraProviderFuture.get()
-
-            // ✅ Unbind all previously bound use cases
-            cameraProvider.unbindAll()
-
-            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-
-            // Preview use case
-            val preview = Preview.Builder().build().also {
-                it.setSurfaceProvider(previewView.surfaceProvider)
-            }
-
-            // Image capture use case
-            imageCapture = ImageCapture.Builder().build()
-
-            // Video capture use case
-            val recorder = Recorder.Builder()
-                .setQualitySelector(QualitySelector.from(Quality.HIGHEST))
-                .build()
-            videoCapture = VideoCapture.withOutput(recorder)
-
-            // Optional image analysis use case
-            val imageAnalysis = ImageAnalysis.Builder().build().also {
-                it.setAnalyzer(cameraExecutor) { imageProxy ->
-                    processImage(imageProxy)
-                }
-            }
-
-            // Bind all use cases to lifecycle
-            cameraProvider.bindToLifecycle(
-                this,
-                cameraSelector,
-                preview,
-                imageCapture,
-                videoCapture,
-                imageAnalysis
-            )
-
-        }, ContextCompat.getMainExecutor(this))
     }
 
     private fun hasCameraPermission(): Boolean {
@@ -289,7 +153,7 @@ class MainActivity : ComponentActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                startCamera()//TODO change with cameraManager.startCamera
+               cameraServiceImpl.startCamera(previewView)//TODO change with cameraManager.startCamera
             } else {
                 resultTextView.text = "Camera permission required!"
             }
@@ -445,8 +309,32 @@ class MainActivity : ComponentActivity() {
             return
         }
     }
+    private fun onPermission2(usbManager:UsbManager, usbDevice: UsbDevice){
+        Thread {
+            try {
+                val sensorHandler = SensorDataHandlerImpl(
+                    uiHandler = Handler(Looper.getMainLooper()),
+                    onSpeedUpdate = { speedTextView.text = it },
+                    shouldTriggerPhoto = { speed ->
+                        abs(speed) > 5f && System.currentTimeMillis() - lastCaptureTime > 5000
+                    },
+                    onPhotoTrigger = { speed ->
+                        lastCaptureTime = System.currentTimeMillis()
+                        cameraServiceImpl.takePhoto(speed, getOutputDirectory())
+                    }
+                )
 
-    private fun onPermission (driver: UsbSerialDriver, connection: UsbDeviceConnection){
+                val usbSerialPortService = UsbSerialPortService(usbManager)
+                val port = usbSerialPortService.initializePort(usbDevice) // now safely on background thread
+                val listenerManager = SerialPortListenerManager(port, sensorHandler)
+
+                listenerManager.start()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error initializing port or starting listener", e)
+            }
+        }.start()
+    }
+   /* private fun onPermission (driver: UsbSerialDriver, connection: UsbDeviceConnection){
         val port: UsbSerialPort =
         driver.getPorts().get(0) // Most devices have just one port (port 0)
 
@@ -464,28 +352,22 @@ class MainActivity : ComponentActivity() {
             override fun onNewData(newData: ByteArray?) {
                 if (!updateScheduled) {
                     val latestValue = newData!!.toString(Charsets.UTF_8)
-
                     if (!isDigitOrMinus(latestValue.first())) {
                         return
                     }
-
+                    val now = System.currentTimeMillis()
+                    val speed = latestValue.toFloatOrNull()
+                    if (speed != null && abs(speed) > 5f && now - lastCaptureTime > 5000) {
+                        lastCaptureTime = now
+                        cameraManagerImpl.takePhoto(speed,getOutputDirectory())
+                    }
                     updateScheduled = true//TODO check again timing
-
                     uiHandler.post({
                         Log.d("Throttler post delayed", latestValue)
-
                         speedTextView.text = latestValue
-
-                        val speed = latestValue.toFloatOrNull()
-                        val now = System.currentTimeMillis()
-
-                        if (speed != null && abs(speed) > 5f && now - lastCaptureTime > 5000) {
-                            lastCaptureTime = now
-                            cameraManagerImpl.takePhoto(speed,getOutputDirectory())
-                        }
-
                         updateScheduled = false
                     })
+
                 }
             }
             override fun onRunError(e: Exception?) {
@@ -496,7 +378,7 @@ class MainActivity : ComponentActivity() {
         }
         val usbIoManager = SerialInputOutputManager(port, listener)
         usbIoManager.start()
-    }
+    }*/
     override fun onDestroy() {
         super.onDestroy()
         unregisterReceiver(usbReceiver)

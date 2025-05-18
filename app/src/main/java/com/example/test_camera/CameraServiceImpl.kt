@@ -21,11 +21,11 @@ import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 
-class CameraManagerImpl(
+class CameraServiceImpl(
         private val context: Context,
         private val lifecycleOwner: LifecycleOwner,
 
-    ) : CameraManager{
+    ) : CameraService{
         private lateinit var imageCapture: ImageCapture
         private lateinit var videoCapture: VideoCapture<Recorder>
         private val analyzeImageExecutor: ExecutorService = Executors.newSingleThreadExecutor()

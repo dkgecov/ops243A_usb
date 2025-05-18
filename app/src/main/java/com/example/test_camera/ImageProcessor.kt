@@ -36,7 +36,7 @@ class ImageProcessor (private val imageCapture: ImageCapture
 
 
 ) {
-    val photoExecutor = Executors.newSingleThreadExecutor()
+    val imageProcessingExecutor  = Executors.newSingleThreadExecutor()
 
     fun takePhoto(speed: Float,outputDir: File) {
         val photoFile = File(outputDir, "IMG_${System.currentTimeMillis()}.jpg")
@@ -45,7 +45,7 @@ class ImageProcessor (private val imageCapture: ImageCapture
 
         imageCapture.takePicture(
             outputOptions,
-            photoExecutor, // ✅ Runs on a background thread
+            imageProcessingExecutor , // ✅ Runs on a background thread
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
                     try {
