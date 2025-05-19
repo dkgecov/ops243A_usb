@@ -6,11 +6,12 @@
     <!-- Camera Preview -->
 
     <!-- Bounding Box Overlay (Hidden by Default) -->
+
     <androidx.camera.view.PreviewView
         android:id="@+id/previewView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_gravity="center" >
+        android:layout_gravity="center">
 
     </androidx.camera.view.PreviewView>
 
@@ -65,4 +66,26 @@
 
     </LinearLayout>
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:background="#212E2E"
+        android:elevation="4dp"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="5dp">
+
+        <Button
+            android:id="@+id/optionsButton"
+            android:layout_width="46dp"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="6dp"
+            android:layout_marginEnd="6dp"
+            android:backgroundTint="#AA000000"
+            android:text="⋮"
+            android:textColor="@android:color/white"
+            android:textSize="30dp" />
+    </LinearLayout>
 </FrameLayout>

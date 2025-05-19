@@ -321,8 +321,7 @@ class MainActivity : ComponentActivity() {
        cameraServiceImpl.close() // ✅ Clean up executor
     }
     private fun checkAndRequestAudioPermission() {// TODO on callback method if declined stop app
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            // Permission is not granted, request it
+        if (!hasAudioPermission()) {
             ActivityCompat.requestPermissions(
                 this,
                 arrayOf(Manifest.permission.RECORD_AUDIO),
