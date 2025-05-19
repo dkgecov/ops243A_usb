@@ -19,8 +19,12 @@ import android.os.Handler
 import android.os.Looper
 import android.service.controls.ControlsProviderService.TAG
 import android.util.Log
+import android.view.Gravity
 import android.view.View
+import android.widget.Button
+import android.widget.PopupMenu
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageProxy
@@ -110,6 +114,31 @@ class MainActivity : ComponentActivity() {
         speedTextView = findViewById(R.id.speed_field)
         infoTextView=findViewById(R.id.errrorTextView)
         infoTextView.visibility=View.GONE
+        val optionsButton = findViewById<Button>(R.id.optionsButton)
+
+        optionsButton.setOnClickListener {
+            val popupMenu = PopupMenu(this, optionsButton, Gravity.END)
+
+            popupMenu.menuInflater.inflate(R.menu.options_menu, popupMenu.menu)
+
+            popupMenu.setOnMenuItemClickListener { item ->
+                when (item.itemId) {
+                    R.id.option_1 -> {
+                        // Handle Set Threshold
+                        Toast.makeText(this, "Set Threshold clicked", Toast.LENGTH_SHORT).show()
+                        true
+                    }
+                    R.id.option_2 -> {
+                        // Handle About
+                        Toast.makeText(this, "About clicked", Toast.LENGTH_SHORT).show()
+                        true
+                    }
+                    else -> false
+                }
+            }
+
+            popupMenu.show()
+        }
         // Set overlay size to match PreviewView
         previewView.post {
             boundingBoxOverlay.layoutParams = boundingBoxOverlay.layoutParams.apply {

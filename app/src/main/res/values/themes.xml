@@ -4,6 +4,12 @@
         <item name="colorPrimary">@color/purple_500</item>
         <item name="colorAccent">@color/teal_200</item>
         <item name="android:windowBackground">@color/white</item>
+        <!-- Apply your popup menu overlay style -->
+        <item name="popupMenuStyle">@style/PopupMenuStyle</item>
+    </style>
+
+    <style name="AppTheme.PopupMenuOverlay" parent="ThemeOverlay.AppCompat.Light">
+        <item name="popupMenuStyle">@style/PopupMenuStyle</item>
     </style>
 </resources>
 
