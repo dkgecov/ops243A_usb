@@ -8,6 +8,7 @@ import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.camera.video.FileOutputOptions
 import androidx.camera.video.Recorder
+import androidx.camera.video.Recording
 import androidx.camera.video.VideoCapture
 import androidx.camera.video.VideoRecordEvent
 import com.example.test_camera.util.StorageUtils
@@ -19,26 +20,30 @@ class VideoProcessor (private val videoCapture: VideoCapture<Recorder>,
 ){
     private val outputDir = StorageUtils.getOutputDirectory(context)
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-     fun startVideoRecording() {
+     fun startVideoRecording( includeAudio:Boolean) {
         val name = "VID_${System.currentTimeMillis()}.mp4"
         val file = File(outputDir, name)
 
         val outputOptions = FileOutputOptions.Builder(file).build()
 
-        val recording = videoCapture.output
+        var mediaRecorder = videoCapture.output
             .prepareRecording(context, outputOptions)
-            .withAudioEnabled() // Optional
-            .start( sharedExecutor) { recordEvent ->
-                if (recordEvent is VideoRecordEvent.Start) {
-                    Log.d("CameraX", "Video recording started")
-                } else if (recordEvent is VideoRecordEvent.Finalize) {
-                    Log.d("CameraX", "Video saved: ${file.absolutePath}")
-                }
-            }
 
-        // Stop after 5 seconds
-        Handler(Looper.getMainLooper()).postDelayed({//TODO is it ok, main UI thread?
-            recording.stop()
-        }, 5000)
+        if (includeAudio) {
+            mediaRecorder = mediaRecorder.withAudioEnabled()
+        }
+        var recording: Recording? = null
+         recording = mediaRecorder.start(sharedExecutor) { recordEvent ->
+            when (recordEvent) {
+                is VideoRecordEvent.Start ->{ Log.d("CameraX", "Video recording started")
+                    Handler(Looper.getMainLooper()).postDelayed({
+                        recording?.stop()
+                    }, 5000)//TODO may not be in UI thread
+                }
+                is VideoRecordEvent.Finalize -> Log.d("CameraX", "Video saved: ${file.absolutePath}")
+            }
+        }
+
+
     }
 }

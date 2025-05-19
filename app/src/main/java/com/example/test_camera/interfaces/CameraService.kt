@@ -6,6 +6,6 @@ import java.io.File
 interface CameraService {
     fun startCamera(previewView: PreviewView)
     fun takePhoto(speed:Float)
-    fun startRecording(outputDir: File)
+    fun startRecording(recordAudio:Boolean)
     fun stopRecording()
 }

@@ -10,6 +10,7 @@ import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.graphics.Matrix
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
@@ -42,6 +43,7 @@ class MainActivity : ComponentActivity() {
     private val uiHandler: Handler = Handler(Looper.getMainLooper())
     private lateinit var cameraServiceImpl: CameraServiceImpl
     private  val CAMERA_PERMISSION_REQUEST_CODE = 1001
+    private val RECORD_AUDIO_REQUEST_CODE = 101
     @Volatile
     private lateinit var binding: ActivityMainBinding
     private lateinit var resultTextView: TextView
@@ -81,12 +83,13 @@ class MainActivity : ComponentActivity() {
                     }
                     infoTextView.visibility=View.VISIBLE
                     infoTextView.text="USB device attached"
-                    //uiHandler.postDelayed({errorTextView.visibility=View.GONE},1500)
+                    infoTextView.setTextColor(Color.GREEN)
                 }
 
                 UsbManager.ACTION_USB_DEVICE_DETACHED -> {
                     infoTextView.visibility=View.VISIBLE
                     infoTextView.text="USB device detached"
+                    infoTextView.setTextColor(Color.YELLOW)
                     Log.d(TAG, "USB device detached")
                     // Optional: Clean up resources here
                 }
@@ -125,25 +128,19 @@ class MainActivity : ComponentActivity() {
             // Start camera
             cameraServiceImpl.startCamera(previewView)
         }
+        checkAndRequestAudioPermission();
 
         val usbDeviceInitializer = UsbDeviceInitializer(
             context = this,
             usbReceiver = usbReceiver,
             onNoUsbDevice = {
                 infoTextView.visibility = View.VISIBLE
-                infoTextView.text = "No USB device found"
+                infoTextView.text = "USB device not found"
             }
         )
 
         usbDeviceInitializer.initialize(ACTION_USB_PERMISSION)
 
-    }
-    private fun getOutputDirectory(): File {
-        val mediaDir = externalMediaDirs.firstOrNull()?.let {
-            File(it, resources.getString(R.string.app_name)).apply { mkdirs() }
-        }
-        return if (mediaDir != null && mediaDir.exists())
-            mediaDir else filesDir
     }
 
     private fun hasCameraPermission(): Boolean {
@@ -292,6 +289,7 @@ class MainActivity : ComponentActivity() {
         System.loadLibrary("test_camera")
     }
 
+    @SuppressLint("MissingPermission")
     private fun onPermission2(usbManager:UsbManager, usbDevice: UsbDevice){
         Thread {
             try {
@@ -303,8 +301,8 @@ class MainActivity : ComponentActivity() {
                     },
                     onPhotoTrigger = { speed ->
                         lastCaptureTime = System.currentTimeMillis()
-                        cameraServiceImpl.takePhoto(speed)
-                    }
+                        cameraServiceImpl.startRecording(hasAudioPermission())}
+
                 )
 
                 val usbSerialPortService = UsbSerialPortService(usbManager)
@@ -322,5 +320,20 @@ class MainActivity : ComponentActivity() {
         unregisterReceiver(usbReceiver)
        cameraServiceImpl.close() // ✅ Clean up executor
     }
-
+    private fun checkAndRequestAudioPermission() {// TODO on callback method if declined stop app
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            // Permission is not granted, request it
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.RECORD_AUDIO),
+                RECORD_AUDIO_REQUEST_CODE
+            )
+        } else {
+            // Permission already granted, proceed with recording or whatever you need
+           // onAudioPermissionGranted()
+        }
+    }
+    private fun hasAudioPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+    }
 }
