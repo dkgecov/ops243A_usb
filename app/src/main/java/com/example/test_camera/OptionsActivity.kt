@@ -9,7 +9,6 @@ import androidx.appcompat.app.AppCompatActivity
 
 class OptionsActivity : AppCompatActivity() {
     private val SPEED = "speed:"
-  //  private var triggerSpeed = 60.0f
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,6 +31,11 @@ class OptionsActivity : AppCompatActivity() {
             resultIntent.putExtra(SELECTED_TRIGGER_SPEED, triggerSpeed)
             resultIntent.putExtra(OPTION_TYPE,OPTION_TRIGGER_SPEED)
             setResult(RESULT_OK, resultIntent)
+            val sharedPref = getSharedPreferences("AppPrefs", MODE_PRIVATE)
+            with (sharedPref.edit()) {
+                putFloat("TRIGGER_SPEED", triggerSpeed)//TODO const
+                apply() // or commit()
+            }
             finish()
         }
         thresholdSeekBar.progress = (triggerSpeed).toInt()

@@ -119,6 +119,8 @@ class MainActivity : ComponentActivity() {
         infoTextView=findViewById(R.id.errrorTextView)
         infoTextView.visibility=View.GONE
         val optionsButton = findViewById<Button>(R.id.optionsButton)
+        val sharedPref = getSharedPreferences("AppPrefs", MODE_PRIVATE)
+        triggerSpeed = sharedPref.getFloat("TRIGGER_SPEED", 60f) // 60f is the default if not set TODO const
 
         optionsButton.setOnClickListener {
             val popupMenu = PopupMenu(this, optionsButton, Gravity.END)
