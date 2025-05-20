@@ -27,7 +27,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        android:background="#851D2C"
+        android:background="#174052"
         android:elevation="4dp"
         android:gravity="center"
         android:orientation="vertical"
@@ -41,8 +41,8 @@
             android:background="@android:color/transparent"
             android:gravity="center"
             android:padding="8dp"
-            android:textColor="@android:color/white"
             android:text="0"
+            android:textColor="@color/white"
             android:textSize="48sp" />
 
         <TextView
@@ -51,7 +51,7 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:padding="8dp"
-            android:textColor="@android:color/white"
+            android:textColor="@color/white"
             android:textSize="18sp" />
 
         <TextView

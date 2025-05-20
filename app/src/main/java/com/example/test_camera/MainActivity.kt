@@ -26,6 +26,8 @@ import android.widget.PopupMenu
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageProxy
 import androidx.camera.video.Recorder
@@ -43,6 +45,8 @@ import java.util.concurrent.Executors
 import kotlin.math.abs
 
 class MainActivity : ComponentActivity() {
+    private var triggerSpeed = 70f
+    private lateinit var optionsLauncher: ActivityResultLauncher<Intent>
     private var lastCaptureTime = 0L
     private val uiHandler: Handler = Handler(Looper.getMainLooper())
     private lateinit var cameraServiceImpl: CameraServiceImpl
@@ -124,8 +128,10 @@ class MainActivity : ComponentActivity() {
             popupMenu.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     R.id.option_1 -> {
-                        // Handle Set Threshold
-                        Toast.makeText(this, "Set Threshold clicked", Toast.LENGTH_SHORT).show()
+                        val intent = Intent(this, OptionsActivity::class.java)
+                        intent.putExtra(OptionsActivity.OPTION_TYPE, OptionsActivity.OPTION_TRIGGER_SPEED)
+                        intent.putExtra(OptionsActivity.DEFAULT_TRIGGER_SPEED, triggerSpeed)
+                        optionsLauncher.launch(intent)
                         true
                     }
                     R.id.option_2 -> {
@@ -139,6 +145,32 @@ class MainActivity : ComponentActivity() {
 
             popupMenu.show()
         }
+
+        // register launcher
+        optionsLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == RESULT_OK) {
+                val data = result.data
+                Log.i("MyAppTriggerSpeed", "Trigger speed updated to $data")
+                val optionType = data?.getStringExtra(OptionsActivity.OPTION_TYPE)
+
+                when (optionType) {
+                    OptionsActivity.OPTION_TRIGGER_SPEED -> {
+                        val selectedSpeed = data.getFloatExtra(OptionsActivity.SELECTED_TRIGGER_SPEED, 70f)
+                        triggerSpeed = selectedSpeed
+                        Log.i("MyAppTriggerSpeed", "Trigger speed updated to $triggerSpeed")
+                        // use updatedSpeed
+                    }
+                    OptionsActivity.OPTION_UNITS -> {
+                        val newUnits = data.getStringExtra(OptionsActivity.RESULT_UNITS)
+                        // handle units
+                    }
+                    // add more cases if needed
+                }
+            }
+        }
+
         // Set overlay size to match PreviewView
         previewView.post {
             boundingBoxOverlay.layoutParams = boundingBoxOverlay.layoutParams.apply {
@@ -326,7 +358,7 @@ class MainActivity : ComponentActivity() {
                     uiHandler = Handler(Looper.getMainLooper()),
                     onSpeedUpdate = { speedTextView.text = it },
                     shouldTriggerPhoto = { speed ->
-                        abs(speed) > 5f && System.currentTimeMillis() - lastCaptureTime > 5000
+                        abs(speed) > triggerSpeed && System.currentTimeMillis() - lastCaptureTime > 5000
                     },
                     onPhotoTrigger = { speed ->
                         lastCaptureTime = System.currentTimeMillis()
