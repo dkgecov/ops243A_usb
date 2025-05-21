@@ -6,8 +6,8 @@ import com.example.test_camera.interfaces.SensorDataHandler
 class SensorDataHandlerImpl (//TODO rename to ...HandlerSerialPort
     private val uiHandler: Handler,
     private val onSpeedUpdate: (String) -> Unit,
-    private val shouldTriggerPhoto: (Float) -> Boolean,
-    private val onPhotoTrigger: (Float) -> Unit,
+    private val shouldCapture: (Float) -> Boolean,
+    private val onCapture: (Float) -> Unit,
 ) : SensorDataHandler {
     @Volatile
     private var updateScheduled = false
@@ -27,8 +27,8 @@ class SensorDataHandlerImpl (//TODO rename to ...HandlerSerialPort
 
         val speed = latestValue.toFloatOrNull() ?: return
 
-        if (shouldTriggerPhoto(speed)) {
-            onPhotoTrigger(speed)
+        if (shouldCapture(speed)) {
+            onCapture(speed)
         }
     }
 

@@ -6,7 +6,6 @@ import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -28,10 +27,7 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageProxy
-import androidx.camera.video.Recorder
-import androidx.camera.video.VideoCapture
 import androidx.camera.view.PreviewView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -39,7 +35,6 @@ import androidx.lifecycle.lifecycleScope
 import com.example.test_camera.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.io.File
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import kotlin.math.abs
@@ -359,10 +354,10 @@ class MainActivity : ComponentActivity() {
                 val sensorHandler = SensorDataHandlerImpl(
                     uiHandler = Handler(Looper.getMainLooper()),
                     onSpeedUpdate = { speedTextView.text = it },
-                    shouldTriggerPhoto = { speed ->
+                    shouldCapture = { speed ->
                         abs(speed) > triggerSpeed && System.currentTimeMillis() - lastCaptureTime > 5000
                     },
-                    onPhotoTrigger = { speed ->
+                    onCapture = { speed ->
                         lastCaptureTime = System.currentTimeMillis()
                         cameraServiceImpl.startRecording(hasAudioPermission())}
 
