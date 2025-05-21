@@ -35,9 +35,11 @@ import androidx.lifecycle.lifecycleScope
 import com.example.test_camera.databinding.ActivityMainBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 import kotlin.math.abs
+
+private const val captureInterval = 5000
+
+private const val defaultTriggerSpeed = 60f
 
 class MainActivity : ComponentActivity() {
     private var triggerSpeed = 70f
@@ -68,7 +70,7 @@ class MainActivity : ComponentActivity() {
 
                     if (permissionGranted && device != null) {
                         uiHandler.postDelayed({infoTextView.visibility=View.GONE},1000)
-                            onPermission2(manager, device)
+                            onPermission(manager, device)
                     } else {
                         Log.d(TAG, "Permission denied for device: $device")
                     }
@@ -100,7 +102,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val cameraExecutor: ExecutorService = Executors.newSingleThreadExecutor()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -115,7 +116,8 @@ class MainActivity : ComponentActivity() {
         infoTextView.visibility=View.GONE
         val optionsButton = findViewById<Button>(R.id.optionsButton)
         val sharedPref = getSharedPreferences("AppPrefs", MODE_PRIVATE)
-        triggerSpeed = sharedPref.getFloat("TRIGGER_SPEED", 60f) // 60f is the default if not set TODO const
+        triggerSpeed = sharedPref.getFloat("TRIGGER_SPEED", defaultTriggerSpeed)
+
 
         optionsButton.setOnClickListener {
             val popupMenu = PopupMenu(this, optionsButton, Gravity.END)
@@ -186,19 +188,14 @@ class MainActivity : ComponentActivity() {
             // Start camera
             cameraServiceImpl.startCamera(previewView)
         }
-        checkAndRequestAudioPermission();
+        requestAudioPermission();
 
         val usbDeviceInitializer = UsbDeviceInitializer(
             context = this,
             usbReceiver = usbReceiver,
-            onNoUsbDevice = {
-                infoTextView.visibility = View.VISIBLE
-                infoTextView.text = "USB device not found"
-            }
         )
-
-        usbDeviceInitializer.initialize(ACTION_USB_PERMISSION)
-
+        usbDeviceInitializer.registerReceivers(ACTION_USB_PERMISSION)
+        checkConnectedDevices();
     }
 
     private fun hasCameraPermission(): Boolean {
@@ -213,9 +210,9 @@ class MainActivity : ComponentActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-               cameraServiceImpl.startCamera(previewView)//TODO change with cameraManager.startCamera
+               cameraServiceImpl.startCamera(previewView)
             } else {
-                resultTextView.text = "Camera permission required!"
+                resultTextView.text = "Camera permission required!"//TODO use only info textVIew
             }
         }
     }
@@ -348,14 +345,14 @@ class MainActivity : ComponentActivity() {
     }
 
     @SuppressLint("MissingPermission")
-    private fun onPermission2(usbManager:UsbManager, usbDevice: UsbDevice){
+    private fun onPermission(usbManager:UsbManager, usbDevice: UsbDevice){
         Thread {
             try {
                 val sensorHandler = SensorDataHandlerImpl(
                     uiHandler = Handler(Looper.getMainLooper()),
                     onSpeedUpdate = { speedTextView.text = it },
                     shouldCapture = { speed ->
-                        abs(speed) > triggerSpeed && System.currentTimeMillis() - lastCaptureTime > 5000
+                        abs(speed) > triggerSpeed && System.currentTimeMillis() - lastCaptureTime > captureInterval
                     },
                     onCapture = { speed ->
                         lastCaptureTime = System.currentTimeMillis()
@@ -378,19 +375,25 @@ class MainActivity : ComponentActivity() {
         unregisterReceiver(usbReceiver)
        cameraServiceImpl.close() // ✅ Clean up executor
     }
-    private fun checkAndRequestAudioPermission() {// TODO on callback method if declined stop app
+    private fun requestAudioPermission() {
         if (!hasAudioPermission()) {
             ActivityCompat.requestPermissions(
                 this,
                 arrayOf(Manifest.permission.RECORD_AUDIO),
                 RECORD_AUDIO_REQUEST_CODE
             )
-        } else {
-            // Permission already granted, proceed with recording or whatever you need
-           // onAudioPermissionGranted()
         }
     }
     private fun hasAudioPermission(): Boolean {
         return ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun checkConnectedDevices() {
+         val usbManager = getSystemService(Context.USB_SERVICE) as UsbManager
+        val deviceList = usbManager.deviceList
+        if (deviceList.isEmpty()) {
+            infoTextView.visibility = View.VISIBLE
+            infoTextView.text = "USB device not found"
+        }
     }
 }

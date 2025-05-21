@@ -25,7 +25,7 @@ class ImageProcessor (private val imageCapture: ImageCapture,private val imagePr
 
     private val outputDir = StorageUtils.getOutputDirectory(context)
 
-    fun takePhoto(speed: Float) {// todo outputDir, from where to pass??
+    fun takePhoto(speed: Float) {
         val photoFile = File(outputDir, "IMG_${System.currentTimeMillis()}.jpg")
 
         val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
