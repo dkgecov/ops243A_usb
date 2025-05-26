@@ -42,7 +42,7 @@ private const val captureInterval = 5000
 private const val defaultTriggerSpeed = 60f
 
 class MainActivity : ComponentActivity() {
-    private var triggerSpeed = 70f
+    private var triggerSpeed = defaultTriggerSpeed
     private lateinit var optionsLauncher: ActivityResultLauncher<Intent>
     private var lastCaptureTime = 0L
     private val uiHandler: Handler = Handler(Looper.getMainLooper())
@@ -50,13 +50,14 @@ class MainActivity : ComponentActivity() {
     private  val CAMERA_PERMISSION_REQUEST_CODE = 1001
     private val RECORD_AUDIO_REQUEST_CODE = 101
     @Volatile
-    private lateinit var binding: ActivityMainBinding
+    private lateinit var binding: ActivityMainBinding// TODO volatile?
     private lateinit var resultTextView: TextView
     private lateinit var speedTextView: TextView
     private lateinit var previewView: PreviewView
     private lateinit var infoTextView: TextView
     private lateinit var boundingBoxOverlay: BoundingBoxOverlay
     private var ACTION_USB_PERMISSION: String = "com.example.test_camera.USB_PERMISSION"
+    private var currentUnit: SpeedUnit = SpeedUnit.KPH
 
     private val usbReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -119,11 +120,32 @@ class MainActivity : ComponentActivity() {
         triggerSpeed = sharedPref.getFloat("TRIGGER_SPEED", defaultTriggerSpeed)
 
 
-        optionsButton.setOnClickListener {
+        // register launcher
+        optionsLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == RESULT_OK) {
+                val data = result.data
+                val optionType = data?.getStringExtra(OptionsActivity.OPTION_TYPE)
+
+                when (optionType) {
+                    OptionsActivity.OPTION_TRIGGER_SPEED -> {
+                        val selectedSpeed = data.getFloatExtra(OptionsActivity.SELECTED_TRIGGER_SPEED, 70f)
+                        triggerSpeed = selectedSpeed
+                    }
+                    OptionsActivity.OPTION_UNITS -> {
+                        val newUnits = data.getStringExtra(OptionsActivity.RESULT_UNITS)
+                        // handle units
+                    }
+                    // add more cases if needed
+                }
+            }
+        }
+
+
+        optionsButton.setOnClickListener { //TODO extract somewhere as build meny or kind of
             val popupMenu = PopupMenu(this, optionsButton, Gravity.END)
-
             popupMenu.menuInflater.inflate(R.menu.options_menu, popupMenu.menu)
-
             popupMenu.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     R.id.option_1 -> {
@@ -134,41 +156,18 @@ class MainActivity : ComponentActivity() {
                         true
                     }
                     R.id.option_2 -> {
-                        // Handle About
-                        Toast.makeText(this, "About clicked", Toast.LENGTH_SHORT).show()
+                        // Handle units
+                        val intent = Intent(this, OptionsActivity::class.java)
+                        intent.putExtra(OptionsActivity.OPTION_TYPE, OptionsActivity.OPTION_UNITS)
                         true
                     }
                     else -> false
                 }
             }
-
             popupMenu.show()
         }
 
-        // register launcher
-        optionsLauncher = registerForActivityResult(
-            ActivityResultContracts.StartActivityForResult()
-        ) { result ->
-            if (result.resultCode == RESULT_OK) {
-                val data = result.data
-                Log.i("MyAppTriggerSpeed", "Trigger speed updated to $data")
-                val optionType = data?.getStringExtra(OptionsActivity.OPTION_TYPE)
 
-                when (optionType) {
-                    OptionsActivity.OPTION_TRIGGER_SPEED -> {
-                        val selectedSpeed = data.getFloatExtra(OptionsActivity.SELECTED_TRIGGER_SPEED, 70f)
-                        triggerSpeed = selectedSpeed
-                        Log.i("MyAppTriggerSpeed", "Trigger speed updated to $triggerSpeed")
-                        // use updatedSpeed
-                    }
-                    OptionsActivity.OPTION_UNITS -> {
-                        val newUnits = data.getStringExtra(OptionsActivity.RESULT_UNITS)
-                        // handle units
-                    }
-                    // add more cases if needed
-                }
-            }
-        }
 
         // Set overlay size to match PreviewView
         previewView.post {
@@ -206,7 +205,7 @@ class MainActivity : ComponentActivity() {
         ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), CAMERA_PERMISSION_REQUEST_CODE)
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {//TODO can this method be used for other permission granted?
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
