@@ -187,7 +187,6 @@ class MainActivity : ComponentActivity() {
             // Start camera
             cameraServiceImpl.startCamera(previewView)
         }
-        requestAudioPermission();
 
         val usbDeviceInitializer = UsbDeviceInitializer(
             context = this,
@@ -210,8 +209,22 @@ class MainActivity : ComponentActivity() {
         if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                cameraServiceImpl.startCamera(previewView)
+                requestAudioPermission()
             } else {
-                resultTextView.text = "Camera permission required!"//TODO use only info textVIew
+                infoTextView.text = "Camera permission required!"//TODO use only info textVIew
+                infoTextView.visibility=View.VISIBLE
+                infoTextView.setTextColor(Color.YELLOW)//TODO extract function for set tetx and gone
+                uiHandler.postDelayed({infoTextView.visibility=View.GONE},2000)
+            }
+        }
+        else if (requestCode == RECORD_AUDIO_REQUEST_CODE) {
+            if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
+                // All good
+            } else {
+                infoTextView.visibility=View.VISIBLE
+                infoTextView.text="No audio recording"
+                infoTextView.setTextColor(Color.YELLOW)//TODO extract function for set tetx and gone
+                uiHandler.postDelayed({infoTextView.visibility=View.GONE},2000)
             }
         }
     }
