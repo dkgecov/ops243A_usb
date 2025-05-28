@@ -153,7 +153,7 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-
+// set options button listener
         optionsButton.setOnClickListener { //TODO extract somewhere as build meny or kind of
             val popupMenu = PopupMenu(this, optionsButton, Gravity.END)
             popupMenu.menuInflater.inflate(R.menu.options_menu, popupMenu.menu)
@@ -178,10 +178,8 @@ class MainActivity : ComponentActivity() {
             popupMenu.show()
         }
 
-
-
         // Set overlay size to match PreviewView
-        previewView.post {
+        previewView.post {// TODO not needed for now as AI model is disabled
             boundingBoxOverlay.layoutParams = boundingBoxOverlay.layoutParams.apply {
                 width = previewView.width
                 height = previewView.height
@@ -195,6 +193,10 @@ class MainActivity : ComponentActivity() {
         if (!hasCameraPermission()) {
             requestCameraPermission()
         } else {
+            // check if audio permission is still not granted after camera was granted
+            if(!hasAudioPermission()){
+                requestAudioPermission()
+            }
             // Start camera
             cameraServiceImpl.startCamera(previewView)
         }
