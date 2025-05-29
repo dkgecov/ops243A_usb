@@ -37,7 +37,7 @@ import bg.getsovd.vehicle_detection.camera.CameraServiceImpl
 import bg.getsovd.vehicle_detection.databinding.ActivityMainBinding
 import bg.getsovd.vehicle_detection.model.SpeedUnit
 import bg.getsovd.vehicle_detection.processing.SensorDataHandlerImpl
-import bg.getsovd.vehicle_detection.ui.options.OptionsActivity
+import bg.getsovd.vehicle_detection.ui.options.TriggeringSpeedActivity
 import bg.getsovd.vehicle_detection.usb.SerialPortListenerManager
 import bg.getsovd.vehicle_detection.usb.UsbDeviceInitializer
 import bg.getsovd.vehicle_detection.usb.UsbSerialPortService
@@ -137,15 +137,15 @@ class MainActivity : ComponentActivity() {
         ) { result ->
             if (result.resultCode == RESULT_OK) {
                 val data = result.data
-                val optionType = data?.getStringExtra(OptionsActivity.OPTION_TYPE)
+                val optionType = data?.getStringExtra(TriggeringSpeedActivity.OPTION_TYPE)
 
                 when (optionType) {
-                    OptionsActivity.OPTION_TRIGGER_SPEED -> {
-                        val selectedSpeed = data.getFloatExtra(OptionsActivity.SELECTED_TRIGGER_SPEED, 70f)
+                    TriggeringSpeedActivity.OPTION_TRIGGER_SPEED -> {
+                        val selectedSpeed = data.getFloatExtra(TriggeringSpeedActivity.SELECTED_TRIGGER_SPEED, 70f)
                         triggerSpeed = selectedSpeed
                     }
-                    OptionsActivity.OPTION_UNITS -> {
-                        val newUnits = data.getStringExtra(OptionsActivity.RESULT_UNITS)
+                    TriggeringSpeedActivity.OPTION_UNITS -> {
+                        val newUnits = data.getStringExtra(TriggeringSpeedActivity.RESULT_UNITS)
                         // handle units
                     }
                     // add more cases if needed
@@ -160,16 +160,16 @@ class MainActivity : ComponentActivity() {
             popupMenu.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
                     R.id.option_1 -> {
-                        val intent = Intent(this, OptionsActivity::class.java)
-                        intent.putExtra(OptionsActivity.OPTION_TYPE, OptionsActivity.OPTION_TRIGGER_SPEED)
-                        intent.putExtra(OptionsActivity.DEFAULT_TRIGGER_SPEED, triggerSpeed)
+                        val intent = Intent(this, TriggeringSpeedActivity::class.java)
+                        intent.putExtra(TriggeringSpeedActivity.OPTION_TYPE, TriggeringSpeedActivity.OPTION_TRIGGER_SPEED)
+                        intent.putExtra(TriggeringSpeedActivity.DEFAULT_TRIGGER_SPEED, triggerSpeed)
                         optionsLauncher.launch(intent)
                         true
                     }
                     R.id.option_2 -> {
                         // Handle units
-                        val intent = Intent(this, OptionsActivity::class.java)
-                        intent.putExtra(OptionsActivity.OPTION_TYPE, OptionsActivity.OPTION_UNITS)
+                        val intent = Intent(this, TriggeringSpeedActivity::class.java)
+                        intent.putExtra(TriggeringSpeedActivity.OPTION_TYPE, TriggeringSpeedActivity.OPTION_UNITS)
                         true
                     }
                     else -> false

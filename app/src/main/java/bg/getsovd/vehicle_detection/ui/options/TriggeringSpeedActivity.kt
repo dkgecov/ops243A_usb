@@ -8,16 +8,15 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import bg.getsovd.vehicle_detection.R
 
-class OptionsActivity : AppCompatActivity() {
-    private val SPEED = "speed:"
+class TriggeringSpeedActivity : AppCompatActivity() {
+    private val SPEED = "speed:"//TODO extract proper constant
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        when (intent.getStringExtra(OPTION_TYPE)) {
-            OPTION_TRIGGER_SPEED ->setupThresholdUI()
-            //    OPTION_UNITS -> setContentView(R.layout.activity_units)
-            //  OPTION_ABOUT -> setContentView(R.layout.activity_about)
-            // else -> setContentView(R.layout.activity_options_default)
+        if (intent.getStringExtra(OPTION_TYPE)==OPTION_TRIGGER_SPEED) {
+             setupThresholdUI()
+        }else{
+            //invalid option
         }
     }
     private fun setupThresholdUI() {
@@ -58,19 +57,11 @@ class OptionsActivity : AppCompatActivity() {
         })
     }
 
-    private fun setupUnitsUI() {
-        // Set up units UI
-    }
-
-    private fun showAboutInfo() {
-        // Display info
-    }
     companion object {
         const val  RESULT_UNITS= "result_units"
         const val OPTION_TYPE = "option_type"
         const val OPTION_TRIGGER_SPEED = "trigger_speed"
         const val OPTION_UNITS = "units"
-        const val OPTION_ABOUT = "about"
         const val DEFAULT_TRIGGER_SPEED = "default_trigger_speed"
         const val SELECTED_TRIGGER_SPEED = "selected_trigger_speed"
     }
