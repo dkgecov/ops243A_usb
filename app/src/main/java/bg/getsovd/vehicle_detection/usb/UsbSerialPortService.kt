@@ -1,14 +1,18 @@
 package bg.getsovd.vehicle_detection.usb
 
 import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbDeviceConnection
 import android.hardware.usb.UsbManager
+import android.util.Log
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.driver.UsbSerialProber
 import java.io.IOException
 
-class UsbSerialPortService(private val usbManager: UsbManager) {
+object UsbSerialPortService {
+      var serialPort: UsbSerialPort? =null
+      var connection: UsbDeviceConnection? =null
 
-    fun initializePort(device: UsbDevice): UsbSerialPort {
+    fun initializePort(device: UsbDevice,usbManager: UsbManager): UsbSerialPort {
         val driver = UsbSerialProber.getDefaultProber().probeDevice(device)
             ?: throw IllegalStateException("No suitable USB driver found for device.")
 
@@ -19,6 +23,7 @@ class UsbSerialPortService(private val usbManager: UsbManager) {
             ?: throw IllegalStateException("No USB serial ports found.")
 
         try {
+            Log.d("myLog","port will be opened")
             port.open(connection)
             port.setParameters(
                 115200,
@@ -26,10 +31,23 @@ class UsbSerialPortService(private val usbManager: UsbManager) {
                 UsbSerialPort.STOPBITS_1,
                 UsbSerialPort.PARITY_NONE
             )
+            Log.d("myLog","port was opened")
         } catch (e: IOException) {
-            throw RuntimeException("Failed to initialize serial port", e)
+            Log.d("myLog","PORT OPEN FAILEDL:" + e.cause)
+            throw RuntimeException("Failed to initialize serial port", e)//TODO, causes permissions dialog loop
         }
-
+        this.serialPort=port
+        this.connection=connection
         return port
+    }
+    fun close() {
+        try {
+            serialPort?.close()
+        } catch (_: Exception) {
+
+        }
+        connection?.close()
+        serialPort = null
+        connection = null
     }
 }

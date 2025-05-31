@@ -8,9 +8,9 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import bg.getsovd.vehicle_detection.R
 
+private const val TRIGGER_SPEED = "TRIGGER_SPEED"
+private const val SPEED = "speed:"
 class TriggeringSpeedActivity : AppCompatActivity() {
-    private val SPEED = "speed:"//TODO extract proper constant
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (intent.getStringExtra(OPTION_TYPE)==OPTION_TRIGGER_SPEED) {
@@ -21,7 +21,7 @@ class TriggeringSpeedActivity : AppCompatActivity() {
     }
     private fun setupThresholdUI() {
         setContentView(R.layout.dialog_threshold)
-        var triggerSpeed=intent.getFloatExtra(DEFAULT_TRIGGER_SPEED,0f)
+        var triggerSpeed=intent.getFloatExtra(DEFAULT_TRIGGER_SPEED,0f)//TODO triggerSpeed is used in too many places
         val thresholdSeekBar = findViewById<SeekBar>(R.id.thresholdSeekBar)
         val thresholdLabel = findViewById<TextView>(R.id.thresholdLabel)
         val saveButton = findViewById<Button>(R.id.saveButton)
@@ -33,7 +33,7 @@ class TriggeringSpeedActivity : AppCompatActivity() {
             setResult(RESULT_OK, resultIntent)
             val sharedPref = getSharedPreferences("AppPrefs", MODE_PRIVATE)
             with (sharedPref.edit()) {
-                putFloat("TRIGGER_SPEED", triggerSpeed)//TODO const
+                putFloat(TRIGGER_SPEED, triggerSpeed)
                 apply() // or commit()
             }
             finish()

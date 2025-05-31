@@ -30,6 +30,8 @@
         </activity>
         <activity android:name=".ui.options.TriggeringSpeedActivity"
             android:theme="@style/AppTheme.OptionsDialog"/>
+        <activity android:name=".ui.options.SpeedUnitsActivity"
+            android:theme="@style/AppTheme.OptionsDialog"/>
     </application>
 
 </manifest>

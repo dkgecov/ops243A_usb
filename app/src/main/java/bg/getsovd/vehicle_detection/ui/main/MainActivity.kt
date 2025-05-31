@@ -23,6 +23,7 @@ import android.view.View
 import android.widget.Button
 import android.widget.PopupMenu
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -43,6 +44,9 @@ import bg.getsovd.vehicle_detection.usb.UsbDeviceInitializer
 import bg.getsovd.vehicle_detection.usb.UsbSerialPortService
 import bg.getsovd.vehicle_detection.model.BoundingBoxOverlay
 import bg.getsovd.vehicle_detection.model.InferenceResult
+import bg.getsovd.vehicle_detection.ui.options.SpeedUnitsActivity
+import bg.getsovd.vehicle_detection.usb.UsbCommandManager
+import com.hoho.android.usbserial.driver.UsbSerialPort
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -109,6 +113,7 @@ class MainActivity : ComponentActivity() {
                     infoTextView.setTextColor(Color.YELLOW)
                     Log.d(TAG, "USB device detached")
                     // Optional: Clean up resources here
+
                 }
             }
         }
@@ -129,7 +134,6 @@ class MainActivity : ComponentActivity() {
         val optionsButton = findViewById<Button>(R.id.optionsButton)
         val sharedPref = getSharedPreferences("AppPrefs", MODE_PRIVATE)
         triggerSpeed = sharedPref.getFloat("TRIGGER_SPEED", defaultTriggerSpeed)
-
 
         // register launcher
         optionsLauncher = registerForActivityResult(
@@ -168,8 +172,9 @@ class MainActivity : ComponentActivity() {
                     }
                     R.id.option_2 -> {
                         // Handle units
-                        val intent = Intent(this, TriggeringSpeedActivity::class.java)
+                        val intent = Intent(this, SpeedUnitsActivity::class.java)
                         intent.putExtra(TriggeringSpeedActivity.OPTION_TYPE, TriggeringSpeedActivity.OPTION_UNITS)
+                        optionsLauncher.launch(intent)
                         true
                     }
                     else -> false
@@ -207,6 +212,14 @@ class MainActivity : ComponentActivity() {
         )
         usbDeviceInitializer.registerReceivers(ACTION_USB_PERMISSION)
         checkConnectedDevices();
+    }
+
+    private fun synchronizeSpeedUnits(port:UsbSerialPort) {
+        val usbCommandManager = UsbCommandManager()
+        val response = usbCommandManager.sendCommand("U?", port)
+        Handler(Looper.getMainLooper()).post {
+        Toast.makeText(applicationContext, String(response), Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun hasCameraPermission(): Boolean {
@@ -384,12 +397,12 @@ class MainActivity : ComponentActivity() {
                         cameraServiceImpl.startRecording(hasAudioPermission())}
 
                 )
-
-                val usbSerialPortService = UsbSerialPortService(usbManager)
-                val port = usbSerialPortService.initializePort(usbDevice) // now safely on background thread
+                //val usbSerialPortService = UsbSerialPortService(usbManager)
+                val port = UsbSerialPortService.initializePort(usbDevice,usbManager) // now safely on background thread (port opening can block UI)
+                synchronizeSpeedUnits(port)
+                // after this register listener to avoid collision
                 val listenerManager = SerialPortListenerManager(port, sensorHandler)
-
-                listenerManager.start()
+                listenerManager.start()// Important!! not having a listener makes android revoke usb permissions
             } catch (e: Exception) {
                 Log.e(TAG, "Error initializing port or starting listener", e)
             }
@@ -399,6 +412,7 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         unregisterReceiver(usbReceiver)
         cameraServiceImpl.close() // ✅ Clean up executor
+        UsbSerialPortService.close()//✅ close port and connection
     }
     private fun requestAudioPermission() {
         if (!hasAudioPermission()) {

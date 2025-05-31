@@ -5,5 +5,5 @@
         android:title="Set Threshold" />
     <item
         android:id="@+id/option_2"
-        android:title="About" />
+        android:title="Set speed units" />
 </menu>
