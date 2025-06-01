@@ -1,8 +1,8 @@
 <resources>
     <string name="app_name">OPS243A_USB</string>
     <string-array name="speed_units_array">
-        <item>kph</item>
+        <item>km/h</item>
         <item>mph</item>
-        <item>mps</item>
+        <item>m/s</item>
     </string-array>
 </resources>

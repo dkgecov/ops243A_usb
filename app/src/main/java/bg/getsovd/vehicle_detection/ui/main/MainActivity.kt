@@ -44,8 +44,12 @@ import bg.getsovd.vehicle_detection.usb.UsbDeviceInitializer
 import bg.getsovd.vehicle_detection.usb.UsbSerialPortService
 import bg.getsovd.vehicle_detection.model.BoundingBoxOverlay
 import bg.getsovd.vehicle_detection.model.InferenceResult
+import bg.getsovd.vehicle_detection.model.MessageType
 import bg.getsovd.vehicle_detection.ui.options.SpeedUnitsActivity
 import bg.getsovd.vehicle_detection.usb.UsbCommandManager
+import bg.getsovd.vehicle_detection.usb.exceptions.InvalidSpeedUnitException
+import bg.getsovd.vehicle_detection.usb.exceptions.NoDeviceResponseException
+import bg.getsovd.vehicle_detection.utils.MessageDisplayer
 import com.hoho.android.usbserial.driver.UsbSerialPort
 
 import kotlinx.coroutines.Dispatchers
@@ -59,8 +63,9 @@ private const val defaultTriggerSpeed = 60f
 class MainActivity : ComponentActivity() {
     private var triggerSpeed = defaultTriggerSpeed
     private lateinit var optionsLauncher: ActivityResultLauncher<Intent>
-    private var lastCaptureTime = 0L
+    private var lastCaptureTime = 0L//TODO this is specific to camereService, why is here?
     private val uiHandler: Handler = Handler(Looper.getMainLooper())
+    private  lateinit var messageDisplayer:MessageDisplayer
     private lateinit var cameraServiceImpl: CameraServiceImpl
     private  val CAMERA_PERMISSION_REQUEST_CODE = 1001
     private val RECORD_AUDIO_REQUEST_CODE = 101
@@ -80,18 +85,6 @@ class MainActivity : ComponentActivity() {
             val manager = context.getSystemService(Context.USB_SERVICE) as UsbManager
 
             when (action) {
-                ACTION_USB_PERMISSION -> {
-                    val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE)
-                    val permissionGranted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
-
-                    if (permissionGranted && device != null) {
-                        uiHandler.postDelayed({infoTextView.visibility=View.GONE},1000)
-                        onPermission(manager, device)
-                    } else {
-                        Log.d(TAG, "Permission denied for device: $device")
-                    }
-                }
-
                 UsbManager.ACTION_USB_DEVICE_ATTACHED -> {
                     val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE)
                     if (device != null && !manager.hasPermission(device)) {
@@ -102,17 +95,25 @@ class MainActivity : ComponentActivity() {
                         )
                         manager.requestPermission(device, permissionIntent)
                     }
-                    infoTextView.visibility=View.VISIBLE
-                    infoTextView.text="USB device attached"
-                    infoTextView.setTextColor(Color.GREEN)
+                    messageDisplayer.showMessage("USB device attached.",MessageType.SUCCESS,2000)
+                }
+
+                ACTION_USB_PERMISSION -> {
+                    val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE)
+                    val permissionGranted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
+
+                    if (permissionGranted && device != null) {
+                      //  uiHandler.postDelayed({infoTextView.visibility=View.GONE},1000)
+                        onPermission(manager, device)
+                    } else {
+                        Log.d(TAG, "Permission denied for device: $device")
+                    }
                 }
 
                 UsbManager.ACTION_USB_DEVICE_DETACHED -> {
-                    infoTextView.visibility=View.VISIBLE
-                    infoTextView.text="USB device detached"
-                    infoTextView.setTextColor(Color.YELLOW)
+                    messageDisplayer.showMessage("USB device detached!",MessageType.WARNING)
                     Log.d(TAG, "USB device detached")
-                    // Optional: Clean up resources here
+                    // TODO Optional: Clean up resources here, close port, conenction !??
 
                 }
             }
@@ -129,8 +130,9 @@ class MainActivity : ComponentActivity() {
         previewView = findViewById(R.id.previewView) // Camera preview view
         boundingBoxOverlay = findViewById(R.id.boundingBoxOverlay) // overlay for boxes / visual ad
         speedTextView = findViewById(R.id.speed_field)
-        infoTextView=findViewById(R.id.errrorTextView)
+        infoTextView=findViewById(R.id.infoTextView)
         infoTextView.visibility=View.GONE
+        messageDisplayer= MessageDisplayer(infoTextView,uiHandler)
         val optionsButton = findViewById<Button>(R.id.optionsButton)
         val sharedPref = getSharedPreferences("AppPrefs", MODE_PRIVATE)
         triggerSpeed = sharedPref.getFloat("TRIGGER_SPEED", defaultTriggerSpeed)
@@ -231,27 +233,24 @@ class MainActivity : ComponentActivity() {
         ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), CAMERA_PERMISSION_REQUEST_CODE)
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {//TODO can this method be used for other permission granted?
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {//TODO can this method be used for other permission granted? deprecated
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
             if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 cameraServiceImpl.startCamera(previewView)
                 requestAudioPermission()
             } else {
-                infoTextView.text = "Camera permission required!"//TODO use only info textVIew
-                infoTextView.visibility=View.VISIBLE
-                infoTextView.setTextColor(Color.YELLOW)//TODO extract function for set tetx and gone
-                uiHandler.postDelayed({infoTextView.visibility=View.GONE},2000)
+                messageDisplayer.showMessage("Camera permission required!",MessageType.WARNING,3000)
             }
         }
         else if (requestCode == RECORD_AUDIO_REQUEST_CODE) {
+            Log.d("myLog", "AUDIO was requested")
             if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
                 // All good
+                Log.d("myLog", "AUDIO was approved")
             } else {
-                infoTextView.visibility=View.VISIBLE
-                infoTextView.text="No audio recording"
-                infoTextView.setTextColor(Color.YELLOW)//TODO extract function for set tetx and gone
-                uiHandler.postDelayed({infoTextView.visibility=View.GONE},2000)
+                messageDisplayer.showMessage("Audio will not be recorded!",MessageType.WARNING,3000)
+                Log.d("myLog", "AUDIO was denied")
             }
         }
     }
@@ -400,7 +399,18 @@ class MainActivity : ComponentActivity() {
                 )
                 //val usbSerialPortService = UsbSerialPortService(usbManager)
                 val port = UsbSerialPortService.initializePort(usbDevice,usbManager) // now safely on background thread (port opening can block UI)
-                synchronizeSpeedUnits(port)
+                try{synchronizeSpeedUnits(port)}
+                catch (e:NoDeviceResponseException){
+                    Log.e("myLog","Error retrieving device default speed units, no device response",e)
+                    messageDisplayer.showMessage("Failed to retrieve device speed units. This can lead to improper behaviour.",MessageType.WARNING)
+                }
+                catch (e: InvalidSpeedUnitException) {
+                    Log.e("myLog","Error retrieving speed units from response",e)
+                    messageDisplayer.showMessage("Failed to retrieve device speed units. This can lead to improper behaviour.",MessageType.WARNING)
+
+                }
+                messageDisplayer.showMessage("Failed to retrieve device speed units. This can lead to improper behaviour.",MessageType.WARNING,3000)
+
                 // after this register listener to avoid collision
                 val listenerManager = SerialPortListenerManager(port, sensorHandler)
                 listenerManager.start()// Important!! not having a listener makes android revoke usb permissions
@@ -416,13 +426,11 @@ class MainActivity : ComponentActivity() {
         UsbSerialPortService.close()//✅ close port and connection
     }
     private fun requestAudioPermission() {
-        if (!hasAudioPermission()) {
             ActivityCompat.requestPermissions(
                 this,
                 arrayOf(Manifest.permission.RECORD_AUDIO),
                 RECORD_AUDIO_REQUEST_CODE
             )
-        }
     }
     private fun hasAudioPermission(): Boolean {
         return ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
@@ -432,8 +440,7 @@ class MainActivity : ComponentActivity() {
         val usbManager = getSystemService(Context.USB_SERVICE) as UsbManager
         val deviceList = usbManager.deviceList
         if (deviceList.isEmpty()) {
-            infoTextView.visibility = View.VISIBLE
-            infoTextView.text = "USB device not found"
+            messageDisplayer.showMessage("USB device not found!",MessageType.INFO)
         }
     }
 }
