@@ -215,11 +215,12 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun synchronizeSpeedUnits(port:UsbSerialPort) {
+        Log.d("myLog", "will sync units")
         val usbCommandManager = UsbCommandManager()
         val response = usbCommandManager.sendCommand("U?", port)
-        Handler(Looper.getMainLooper()).post {
-        Toast.makeText(applicationContext, String(response), Toast.LENGTH_SHORT).show()
-        }
+        val transformedResponse = response.toString(Charsets.UTF_8)
+        Log.d("myLog", "transformed bytes: $transformedResponse")
+        this.currentUnit=SpeedUnit.fromResponse(transformedResponse)
     }
 
     private fun hasCameraPermission(): Boolean {
