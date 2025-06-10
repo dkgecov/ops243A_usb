@@ -33,7 +33,7 @@ object UsbSerialPortService {
             )
             Log.d("myLog","port was opened")
         } catch (e: IOException) {
-            Log.d("myLog","PORT OPEN FAILEDL:" + e.cause)
+            Log.d("myLog","PORT OPEN FAILED:" + e.cause)
             throw RuntimeException("Failed to initialize serial port", e)//TODO, causes permissions dialog loop
         }
         this.serialPort=port

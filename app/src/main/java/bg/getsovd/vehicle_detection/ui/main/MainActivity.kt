@@ -216,13 +216,13 @@ class MainActivity : ComponentActivity() {
         checkConnectedDevices();
     }
 
-    private fun synchronizeSpeedUnits(port:UsbSerialPort) {
+    private fun synchronizeSpeedUnits(port:UsbSerialPort): String {
         Log.d("myLog", "will sync units")
         val usbCommandManager = UsbCommandManager()
         val response = usbCommandManager.sendCommand("U?", port)
         val transformedResponse = response.toString(Charsets.UTF_8)
         Log.d("myLog", "transformed bytes: $transformedResponse")
-        this.currentUnit=SpeedUnit.fromResponse(transformedResponse)
+        return transformedResponse
     }
 
     private fun hasCameraPermission(): Boolean {
@@ -399,17 +399,23 @@ class MainActivity : ComponentActivity() {
                 )
                 //val usbSerialPortService = UsbSerialPortService(usbManager)
                 val port = UsbSerialPortService.initializePort(usbDevice,usbManager) // now safely on background thread (port opening can block UI)
-                try{synchronizeSpeedUnits(port)}
+                try{
+                    val response = synchronizeSpeedUnits(port)
+                    this.currentUnit=SpeedUnit.fromResponse(response)
+                    messageDisplayer.showMessage("Retrieved device default speed units: ${currentUnit.symbol}",MessageType.INFO,5000)
+                }
+
                 catch (e:NoDeviceResponseException){
                     Log.e("myLog","Error retrieving device default speed units, no device response",e)
-                    messageDisplayer.showMessage("Failed to retrieve device speed units. This can lead to improper behaviour.",MessageType.WARNING)
-                }
+                    messageDisplayer.showMessage("Failed to retrieve device speed units. " +
+                            "This can lead to improper behaviour. Refer to the device user manual to check default units reporting",MessageType.WARNING)                }
                 catch (e: InvalidSpeedUnitException) {
                     Log.e("myLog","Error retrieving speed units from response",e)
-                    messageDisplayer.showMessage("Failed to retrieve device speed units. This can lead to improper behaviour.",MessageType.WARNING)
+                    messageDisplayer.showMessage("Failed to retrieve device speed units. " +
+                            "This can lead to improper behaviour. Refer to the device user manual to check default units reporting",MessageType.WARNING)
 
                 }
-                messageDisplayer.showMessage("Failed to retrieve device speed units. This can lead to improper behaviour.",MessageType.WARNING,3000)
+
 
                 // after this register listener to avoid collision
                 val listenerManager = SerialPortListenerManager(port, sensorHandler)
