@@ -19,27 +19,26 @@ class SensorDataHandlerImpl (//TODO rename to ...HandlerSerialPort
     override fun handleNewData(newData: ByteArray?) {//TODO Wifi case may not accept ByteArray
         if(newData == null) return;
         val latestValue = String(newData, Charsets.UTF_8)
-        Log.e("myLog","latest value: "+latestValue +" END")
+        Log.d("myLog","latest value: "+latestValue +" END")
         if (!updateScheduled) {
             if (latestValue.endsWith("\n")) {
-                processLine(latestValue)
+                incomingBuffer.append(latestValue)
+                processLine(incomingBuffer.toString())
             } else {
-                Log.e("myLog", "buffering..." + latestValue)
+                Log.e("myLog", "buffering...$latestValue")
                 incomingBuffer.append(latestValue)
             }
         }
     }
 
-    private fun processLine(latestValue: String) {
+    private fun processLine(fullLine: String) {
         updateScheduled = true
-        incomingBuffer.append(latestValue)
-        Log.e("myLog", "buffer:" + incomingBuffer.toString())
-        val fullLine = incomingBuffer.toString()
-        uiHandler.post({
+        Log.d("myLog", "processing: " + fullLine)
+        uiHandler.post {
             onSpeedUpdate(fullLine)
             updateScheduled = false
             incomingBuffer.clear()
-        })
+        }
         val speed = extractFirstNumber(fullLine);
         if (speed != null && shouldCapture(speed)) {
             onCapture(speed)
