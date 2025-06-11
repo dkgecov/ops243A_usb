@@ -2,20 +2,27 @@ package bg.getsovd.vehicle_detection.ui.options
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.Spinner
 import androidx.appcompat.app.AppCompatActivity
 import bg.getsovd.vehicle_detection.R
+import bg.getsovd.vehicle_detection.model.SpeedUnit
 import bg.getsovd.vehicle_detection.ui.options.TriggeringSpeedActivity.Companion.OPTION_TRIGGER_SPEED
 import bg.getsovd.vehicle_detection.ui.options.TriggeringSpeedActivity.Companion.OPTION_TYPE
 import bg.getsovd.vehicle_detection.ui.options.TriggeringSpeedActivity.Companion.OPTION_UNITS
 import bg.getsovd.vehicle_detection.ui.options.TriggeringSpeedActivity.Companion.SELECTED_TRIGGER_SPEED
+import bg.getsovd.vehicle_detection.usb.UsbCommandManager
+import bg.getsovd.vehicle_detection.usb.UsbSerialPortService.serialPort
 
 class SpeedUnitsActivity: AppCompatActivity() {
+   lateinit var  usbCommandManager: UsbCommandManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (intent.getStringExtra(OPTION_TYPE)== OPTION_UNITS) {
+            usbCommandManager = UsbCommandManager();
             setupSpeedUnitsUI()
         }else{
             //TODO invalid option
@@ -37,12 +44,21 @@ class SpeedUnitsActivity: AppCompatActivity() {
             // Here, you can save the triggerSpeed and finish the activity
             val resultIntent = Intent()
             val selectedUnits=spinner.selectedItem.toString()
+            var command:String = ""
+            when(selectedUnits){
+                SpeedUnit.KPH.symbol->{command="UK"}
+                SpeedUnit.MPH.symbol->{command="US"}
+                SpeedUnit.MPS.symbol->{command="UM"}
+                //else -> command = ""
+            }
+            try{
+            serialPort?.let { it1 -> usbCommandManager.sendCommand(command, it1) }}//TODO runs currently on UI thread (bad)
+            catch (e:Exception){
+                Log.e("myLog",e.toString())
+            }
             resultIntent.putExtra(SELECTED_UNITS, selectedUnits)
             resultIntent.putExtra(OPTION_TYPE, OPTION_UNITS)
             setResult(RESULT_OK, resultIntent)
-
-
-
             finish()
         }
 

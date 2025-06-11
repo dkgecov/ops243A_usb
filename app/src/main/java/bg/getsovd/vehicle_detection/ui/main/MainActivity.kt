@@ -60,10 +60,12 @@ private const val captureInterval = 5000
 
 private const val defaultTriggerSpeed = 60f
 
+private const val CHECK_UNITS_COMMAND = "U?"
+
 class MainActivity : ComponentActivity() {
     private var triggerSpeed = defaultTriggerSpeed
     private lateinit var optionsLauncher: ActivityResultLauncher<Intent>
-    private var lastCaptureTime = 0L//TODO this is specific to camereService, why is here?
+    private var  lastCaptureTime = 0L//TODO this is specific to camereService, why is here?
     private val uiHandler: Handler = Handler(Looper.getMainLooper())
     private  lateinit var messageDisplayer:MessageDisplayer
     private lateinit var cameraServiceImpl: CameraServiceImpl
@@ -77,7 +79,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var infoTextView: TextView
     private lateinit var boundingBoxOverlay: BoundingBoxOverlay
     private var ACTION_USB_PERMISSION: String = "bg.getsovd.vehicle_detection.USB_PERMISSION"
-    private var currentUnit: SpeedUnit = SpeedUnit.KPH
+    private lateinit var currentUnit: SpeedUnit
 
     private val usbReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -159,7 +161,7 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-// set options button listener
+// set options button listener and launching activities
         optionsButton.setOnClickListener { //TODO extract somewhere as build meny or kind of
             val popupMenu = PopupMenu(this, optionsButton, Gravity.END)
             popupMenu.menuInflater.inflate(R.menu.options_menu, popupMenu.menu)
@@ -216,10 +218,10 @@ class MainActivity : ComponentActivity() {
         checkConnectedDevices();
     }
 
-    private fun synchronizeSpeedUnits(port:UsbSerialPort): String {
+    private fun synchronizeSpeedUnits(port:UsbSerialPort): String {// TODO wehere should be the try
         Log.d("myLog", "will sync units")
         val usbCommandManager = UsbCommandManager()
-        val response = usbCommandManager.sendCommand("U?", port)
+        val response = usbCommandManager.sendCommand(CHECK_UNITS_COMMAND, port)
         val transformedResponse = response.toString(Charsets.UTF_8)
         Log.d("myLog", "transformed bytes: $transformedResponse")
         return transformedResponse
@@ -415,8 +417,6 @@ class MainActivity : ComponentActivity() {
                             "This can lead to improper behaviour. Refer to the device user manual to check default units reporting",MessageType.WARNING)
 
                 }
-
-
                 // after this register listener to avoid collision
                 val listenerManager = SerialPortListenerManager(port, sensorHandler)
                 listenerManager.start()// Important!! not having a listener makes android revoke usb permissions

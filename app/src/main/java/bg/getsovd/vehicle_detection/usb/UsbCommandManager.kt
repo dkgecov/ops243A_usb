@@ -11,7 +11,7 @@ class UsbCommandManager (){
     fun sendCommand(command:String, port:UsbSerialPort):ByteArray{
         val buffer = ByteArray(64)
         try {
-            while (port.read(buffer, 50) > 0) {
+            while (port.read(buffer, 100) > 0) {
                 // discard anything available before sending
             }
         } catch (e: IOException) {
@@ -19,9 +19,9 @@ class UsbCommandManager (){
         }
         val request = command.toByteArray()
 
-        port.write(request, 10)
-        val response = ByteArray(32)
-        val bytesRead = port.read(response,10)
+        port.write(request, 200)
+        val response = ByteArray(64)
+        val bytesRead = port.read(response,300)
         if (bytesRead <= 0) {
             throw NoDeviceResponseException("No response received for command: '$command'")
         }
