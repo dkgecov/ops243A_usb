@@ -9,7 +9,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Color
 import android.graphics.Matrix
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
@@ -23,7 +22,6 @@ import android.view.View
 import android.widget.Button
 import android.widget.PopupMenu
 import android.widget.TextView
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,9 +35,8 @@ import bg.getsovd.vehicle_detection.R
 import bg.getsovd.vehicle_detection.camera.CameraServiceImpl
 import bg.getsovd.vehicle_detection.databinding.ActivityMainBinding
 import bg.getsovd.vehicle_detection.model.SpeedUnit
-import bg.getsovd.vehicle_detection.processing.SensorDataHandlerImpl
+import bg.getsovd.vehicle_detection.processing.SpeedDataHandler
 import bg.getsovd.vehicle_detection.ui.options.TriggeringSpeedActivity
-import bg.getsovd.vehicle_detection.usb.SerialPortListenerManager
 import bg.getsovd.vehicle_detection.usb.UsbDeviceInitializer
 import bg.getsovd.vehicle_detection.usb.UsbSerialPortService
 import bg.getsovd.vehicle_detection.model.BoundingBoxOverlay
@@ -47,10 +44,13 @@ import bg.getsovd.vehicle_detection.model.InferenceResult
 import bg.getsovd.vehicle_detection.model.MessageType
 import bg.getsovd.vehicle_detection.ui.options.SpeedUnitsActivity
 import bg.getsovd.vehicle_detection.usb.UsbCommandManager
+import bg.getsovd.vehicle_detection.usb.UsbDataDispatcher
 import bg.getsovd.vehicle_detection.usb.exceptions.InvalidSpeedUnitException
 import bg.getsovd.vehicle_detection.usb.exceptions.NoDeviceResponseException
 import bg.getsovd.vehicle_detection.utils.MessageDisplayer
 import com.hoho.android.usbserial.driver.UsbSerialPort
+import com.hoho.android.usbserial.util.SerialInputOutputManager
+import kotlinx.coroutines.CoroutineScope
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -115,7 +115,8 @@ class MainActivity : ComponentActivity() {
                 UsbManager.ACTION_USB_DEVICE_DETACHED -> {
                     messageDisplayer.showMessage("USB device detached!",MessageType.WARNING)
                     Log.d(TAG, "USB device detached")
-                    // TODO Optional: Clean up resources here, close port, conenction !??
+                    UsbSerialPortService.close()
+                    // TODO Optional: Clean up more resources here
 
                 }
             }
@@ -216,15 +217,6 @@ class MainActivity : ComponentActivity() {
         )
         usbDeviceInitializer.registerReceivers(ACTION_USB_PERMISSION)
         checkConnectedDevices();
-    }
-
-    private fun synchronizeSpeedUnits(port:UsbSerialPort): String {// TODO wehere should be the try
-        Log.d("myLog", "will sync units")
-        val usbCommandManager = UsbCommandManager()
-        val response = usbCommandManager.sendCommand(CHECK_UNITS_COMMAND, port)
-        val transformedResponse = response.toString(Charsets.UTF_8)
-        Log.d("myLog", "transformed bytes: $transformedResponse")
-        return transformedResponse
     }
 
     private fun hasCameraPermission(): Boolean {
@@ -385,10 +377,10 @@ class MainActivity : ComponentActivity() {
     }
 
     @SuppressLint("MissingPermission")
-    private fun onPermission(usbManager:UsbManager, usbDevice: UsbDevice){
-        Thread {
+    private fun onPermission(usbManager: UsbManager, usbDevice: UsbDevice) {
+        CoroutineScope(Dispatchers.IO).launch {
             try {
-                val sensorHandler = SensorDataHandlerImpl(
+                val speedHandler = SpeedDataHandler(
                     uiHandler = Handler(Looper.getMainLooper()),
                     onSpeedUpdate = { speedTextView.text = it },
                     shouldCapture = { speed ->
@@ -396,34 +388,48 @@ class MainActivity : ComponentActivity() {
                     },
                     onCapture = { speed ->
                         lastCaptureTime = System.currentTimeMillis()
-                        cameraServiceImpl.startRecording(hasAudioPermission())}
-
+                        cameraServiceImpl.startRecording(hasAudioPermission())
+                    }
                 )
-                //val usbSerialPortService = UsbSerialPortService(usbManager)
-                val port = UsbSerialPortService.initializePort(usbDevice,usbManager) // now safely on background thread (port opening can block UI)
-                try{
-                    val response = synchronizeSpeedUnits(port)
-                    this.currentUnit=SpeedUnit.fromResponse(response)
-                    messageDisplayer.showMessage("Retrieved device default speed units: ${currentUnit.symbol}",MessageType.INFO,5000)
-                }
 
-                catch (e:NoDeviceResponseException){
-                    Log.e("myLog","Error retrieving device default speed units, no device response",e)
-                    messageDisplayer.showMessage("Failed to retrieve device speed units. " +
-                            "This can lead to improper behaviour. Refer to the device user manual to check default units reporting",MessageType.WARNING)                }
-                catch (e: InvalidSpeedUnitException) {
-                    Log.e("myLog","Error retrieving speed units from response",e)
-                    messageDisplayer.showMessage("Failed to retrieve device speed units. " +
-                            "This can lead to improper behaviour. Refer to the device user manual to check default units reporting",MessageType.WARNING)
+                UsbDataDispatcher.registerConsumer(speedHandler)
+                UsbDataDispatcher.registerConsumer(UsbCommandManager)
 
+                val port = UsbSerialPortService.initializePort(usbDevice, usbManager)
+                UsbSerialPortService.flushStalePortData()
+                val serialManager = SerialInputOutputManager(port, UsbDataDispatcher)
+                serialManager.start()
+
+                try {
+                    Log.d("myLog", "will sync units")
+                    val response = UsbCommandManager. sendCommand(CHECK_UNITS_COMMAND, port)
+                    Log.d("myLog", "response: $response")
+                        currentUnit = SpeedUnit.fromResponse(response)
+                        messageDisplayer.showMessage(
+                            "Retrieved device default speed units: ${currentUnit.symbol}",
+                            MessageType.INFO,
+                            5000
+                        )
+                } catch (e: NoDeviceResponseException) {
+                    Log.e("myLog", "Error retrieving device default speed units, no device response", e)
+
+                        messageDisplayer.showMessage(
+                            "Failed to retrieve device speed units. " +
+                                    "This can lead to improper behaviour. Refer to the device user manual to check default units reporting",
+                            MessageType.WARNING
+                        )
+                } catch (e: InvalidSpeedUnitException) {
+                    Log.e("myLog", "Error retrieving speed units from response", e)
+                        messageDisplayer.showMessage(
+                            "Failed to retrieve device speed units. " +
+                                    "This can lead to improper behaviour. Refer to the device user manual to check default units reporting",
+                            MessageType.WARNING
+                        )
                 }
-                // after this register listener to avoid collision
-                val listenerManager = SerialPortListenerManager(port, sensorHandler)
-                listenerManager.start()// Important!! not having a listener makes android revoke usb permissions
             } catch (e: Exception) {
                 Log.e(TAG, "Error initializing port or starting listener", e)
             }
-        }.start()
+        }
     }
     override fun onDestroy() {
         super.onDestroy()

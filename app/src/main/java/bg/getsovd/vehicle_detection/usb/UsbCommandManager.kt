@@ -2,30 +2,48 @@ package bg.getsovd.vehicle_detection.usb
 
 import android.service.controls.ControlsProviderService.TAG
 import android.util.Log
+import bg.getsovd.vehicle_detection.processing.SensorDataConsumer
 import bg.getsovd.vehicle_detection.usb.exceptions.NoDeviceResponseException
 import com.hoho.android.usbserial.driver.UsbSerialPort
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeout
 import java.io.IOException
 
-class UsbCommandManager (){
+object UsbCommandManager : SensorDataConsumer{
+    private var waitingForResponse = false
+    private var pendingResponse: CompletableDeferred<String>? = null
+    private val commandMutex = Mutex()
 
-    fun sendCommand(command:String, port:UsbSerialPort):ByteArray{
-        val buffer = ByteArray(64)
-        try {
-            while (port.read(buffer, 100) > 0) {
-                // discard anything available before sending
+    suspend fun sendCommand(command:String, port:UsbSerialPort):String {
+        return commandMutex.withLock {
+            val request = command.toByteArray()
+            // Prepare for incoming response
+            val responseDeferred = CompletableDeferred<String>()
+            pendingResponse = responseDeferred
+
+            port.write(request, 200)
+            waitingForResponse = true
+            try {
+                // Wait up to 300ms for the response
+                val response = withTimeout(300) {
+                    responseDeferred.await()
+                }
+                return response
+            } finally {
+                pendingResponse = null // Clear on success or failure
+                waitingForResponse = false
             }
-        } catch (e: IOException) {
-            Log.e("myLog", "Flush read failed: ${e.message}")//TODO TAG
         }
-        val request = command.toByteArray()
+    }
+    override fun handleNewData(line: String?) {
+        if (line != null && pendingResponse?.isCompleted == false) {
+            pendingResponse?.complete(line)
+        }
+    }
 
-        port.write(request, 200)
-        val response = ByteArray(64)
-        val bytesRead = port.read(response,300)
-        if (bytesRead <= 0) {
-            throw NoDeviceResponseException("No response received for command: '$command'")
-        }
-        Log.d("myLog", "bytes read: "+bytesRead)
-         return response.copyOf(bytesRead)
+    override fun isDataSuitable(line: String): Boolean {
+        return waitingForResponse;
     }
 }

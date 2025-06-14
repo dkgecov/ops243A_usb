@@ -5,41 +5,36 @@ import android.util.Log
 
 private const val CR = 13.toByte()  // Carriage Return
 private const val LF = 10.toByte()  // Line Feed
-class SensorDataHandlerImpl (//TODO rename to ...HandlerSerialPort
+class SpeedDataHandler (
     private val uiHandler: Handler,
     private val onSpeedUpdate: (String) -> Unit,
     private val shouldCapture: (Float) -> Boolean,
     private val onCapture: (Float) -> Unit,
-) : SensorDataHandler {
+) : SensorDataConsumer {
     @Volatile
     private var updateScheduled = false
-    private var incomingBuffer  = StringBuilder()
 
     @Synchronized
-    override fun handleNewData(newData: ByteArray?) {//TODO Wifi case may not accept ByteArray
-        if(newData == null) return;
-        val latestValue = String(newData, Charsets.UTF_8)
-        Log.d("myLog","latest value: "+latestValue +" END")
+    override fun handleNewData(line: String?) {//TODO Wifi case may not accept ByteArray
         if (!updateScheduled) {
-            if (latestValue.endsWith("\n")) {
-                incomingBuffer.append(latestValue)
-                processLine(incomingBuffer.toString())
-            } else {
-                Log.e("myLog", "buffering...$latestValue")
-                incomingBuffer.append(latestValue)
+            if (line != null) {
+                processLine(line)
             }
         }
     }
 
-    private fun processLine(fullLine: String) {
+    override fun isDataSuitable(line: String): Boolean {
+        return isLikelySpeedReport(line)
+    }
+
+    private fun processLine(line: String) {
         updateScheduled = true
-        Log.d("myLog", "processing: " + fullLine)
+        Log.d("myLog", "processing line: " + line)
         uiHandler.post {
-            onSpeedUpdate(fullLine)
+            onSpeedUpdate(line)
             updateScheduled = false
-            incomingBuffer.clear()
         }
-        val speed = extractFirstNumber(fullLine);
+        val speed = extractFirstNumber(line);
         if (speed != null && shouldCapture(speed)) {
             onCapture(speed)
         }
@@ -65,5 +60,20 @@ class SensorDataHandlerImpl (//TODO rename to ...HandlerSerialPort
         }
 
         return sb.toString().toFloatOrNull()
+    }
+
+         private fun isLikelySpeedReport(text: String): Boolean {
+        return try {
+            // Case 1: Pure number
+            text.trim().toDoubleOrNull() != null ||
+
+                    // Case 2: Unit, value
+                    Regex("""^"(kmph|mph|mps)",-?\d+(\.\d+)?$""", RegexOption.IGNORE_CASE).matches(text.trim()) ||
+
+                    // Case 3: JSON with "unit" and "speed"
+                    Regex("""\{\s*"unit"\s*:\s*".+?",\s*"speed"\s*:\s*".+?"\s*\}""").containsMatchIn(text)
+        } catch (e: Exception) {
+            false
+        }
     }
 }

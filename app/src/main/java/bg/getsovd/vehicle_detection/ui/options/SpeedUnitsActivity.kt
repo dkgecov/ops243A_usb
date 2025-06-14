@@ -14,15 +14,16 @@ import bg.getsovd.vehicle_detection.ui.options.TriggeringSpeedActivity.Companion
 import bg.getsovd.vehicle_detection.ui.options.TriggeringSpeedActivity.Companion.OPTION_UNITS
 import bg.getsovd.vehicle_detection.ui.options.TriggeringSpeedActivity.Companion.SELECTED_TRIGGER_SPEED
 import bg.getsovd.vehicle_detection.usb.UsbCommandManager
-import bg.getsovd.vehicle_detection.usb.UsbSerialPortService.serialPort
+import bg.getsovd.vehicle_detection.usb.UsbSerialPortService
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class SpeedUnitsActivity: AppCompatActivity() {
-   lateinit var  usbCommandManager: UsbCommandManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (intent.getStringExtra(OPTION_TYPE)== OPTION_UNITS) {
-            usbCommandManager = UsbCommandManager();
             setupSpeedUnitsUI()
         }else{
             //TODO invalid option
@@ -41,8 +42,7 @@ class SpeedUnitsActivity: AppCompatActivity() {
 
         val saveButton = findViewById<Button>(R.id.saveButton)
         saveButton.setOnClickListener {
-            // Here, you can save the triggerSpeed and finish the activity
-            val resultIntent = Intent()
+            CoroutineScope(Dispatchers.IO).launch {
             val selectedUnits=spinner.selectedItem.toString()
             var command:String = ""
             when(selectedUnits){
@@ -52,20 +52,18 @@ class SpeedUnitsActivity: AppCompatActivity() {
                 //else -> command = ""
             }
             try{
-            serialPort?.let { it1 -> usbCommandManager.sendCommand(command, it1) }}//TODO runs currently on UI thread (bad)
+                var serialPort = UsbSerialPortService.getSerialPort()
+            UsbCommandManager.sendCommand(command,serialPort) }//TODO in coroutine now, should  it all be in?
             catch (e:Exception){
                 Log.e("myLog",e.toString())
             }
+                val resultIntent = Intent()
             resultIntent.putExtra(SELECTED_UNITS, selectedUnits)
             resultIntent.putExtra(OPTION_TYPE, OPTION_UNITS)
             setResult(RESULT_OK, resultIntent)
             finish()
+            }
         }
-
-
-
-
-
     }
     companion object {
         const val  SELECTED_UNITS= "selected_units"
