@@ -80,6 +80,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var boundingBoxOverlay: BoundingBoxOverlay
     private var ACTION_USB_PERMISSION: String = "bg.getsovd.vehicle_detection.USB_PERMISSION"
     private lateinit var currentUnit: SpeedUnit
+    private var serialManager:SerialInputOutputManager?=null
 
     private val usbReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -88,6 +89,7 @@ class MainActivity : ComponentActivity() {
 
             when (action) {
                 UsbManager.ACTION_USB_DEVICE_ATTACHED -> {
+                    Log.d("usbActions", "USB was attached")
                     val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE)
                     if (device != null && !manager.hasPermission(device)) {
                         val permissionIntent = PendingIntent.getBroadcast(
@@ -101,11 +103,12 @@ class MainActivity : ComponentActivity() {
                 }
 
                 ACTION_USB_PERMISSION -> {
+
                     val device = intent.getParcelableExtra<UsbDevice>(UsbManager.EXTRA_DEVICE)
                     val permissionGranted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
 
                     if (permissionGranted && device != null) {
-                      //  uiHandler.postDelayed({infoTextView.visibility=View.GONE},1000)
+                        Log.d("usbActions", "USB permission granted")
                         onPermission(manager, device)
                     } else {
                         Log.d(TAG, "Permission denied for device: $device")
@@ -113,11 +116,13 @@ class MainActivity : ComponentActivity() {
                 }
 
                 UsbManager.ACTION_USB_DEVICE_DETACHED -> {
+                    Log.d("usbActions", "USB was detached")
                     messageDisplayer.showMessage("USB device detached!",MessageType.WARNING)
                     Log.d(TAG, "USB device detached")
                     UsbSerialPortService.close()
+                    serialManager?.stop()
+                    serialManager = null
                     // TODO Optional: Clean up more resources here
-
                 }
             }
         }
@@ -397,8 +402,9 @@ class MainActivity : ComponentActivity() {
 
                 val port = UsbSerialPortService.initializePort(usbDevice, usbManager)
                 UsbSerialPortService.flushStalePortData()
-                val serialManager = SerialInputOutputManager(port, UsbDataDispatcher)
-                serialManager.start()
+                val manager = SerialInputOutputManager(port, UsbDataDispatcher)// use local variable to avoid null issues
+                serialManager = manager
+                manager.start()
 
                 try {
                     Log.d("myLog", "will sync units")
@@ -429,6 +435,10 @@ class MainActivity : ComponentActivity() {
             } catch (e: Exception) {
                 Log.e(TAG, "Error initializing port or starting listener", e)
             }
+            val runtime = Runtime.getRuntime()
+            val usedMemory = runtime.totalMemory() - runtime.freeMemory()
+           // println("Used memory: $usedMemory bytes")
+            messageDisplayer.showMessage(usedMemory.toString(),MessageType.WARNING,5000)
         }
     }
     override fun onDestroy() {

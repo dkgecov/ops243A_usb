@@ -25,7 +25,7 @@ object UsbSerialPortService {
         val connection = usbManager.openDevice(device)
             ?: throw IllegalStateException("Could not open USB device connection.")
 
-        val port = driver.ports.firstOrNull()
+        val port = driver.ports.firstOrNull()//TODO is this first or null ok ?
             ?: throw IllegalStateException("No USB serial ports found.")
 
         try {

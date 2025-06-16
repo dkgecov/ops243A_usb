@@ -12,15 +12,17 @@ object UsbDataDispatcher : SerialInputOutputManager.Listener  {
     private val consumers = mutableListOf<SensorDataConsumer>()
 
     fun registerConsumer(consumer: SensorDataConsumer) {
-        consumers += consumer
+        if (consumers.none { it::class == consumer::class }) {
+            consumers.add(consumer)
+        }
     }
-
     fun unregisterConsumer(consumer: SensorDataConsumer) {
         consumers -= consumer
     }
 
     @Synchronized
     override fun onNewData(newData: ByteArray?) {// TODO Synchronize
+        Log.d("ThreadCheck", "Running on thread: ${Thread.currentThread().id}")
         if (newData == null) return;
         val latestValue = String(newData, Charsets.UTF_8)
 
