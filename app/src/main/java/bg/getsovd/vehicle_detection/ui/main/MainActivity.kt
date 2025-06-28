@@ -65,7 +65,6 @@ private const val CHECK_UNITS_COMMAND = "U?"
 class MainActivity : ComponentActivity() {
     private var triggerSpeed = defaultTriggerSpeed
     private lateinit var optionsLauncher: ActivityResultLauncher<Intent>
-    private var  lastCaptureTime = 0L//TODO this is specific to camereService, why is here?
     private val uiHandler: Handler = Handler(Looper.getMainLooper())
     private  lateinit var messageDisplayer:MessageDisplayer
     private lateinit var cameraServiceImpl: CameraServiceImpl
@@ -389,10 +388,9 @@ class MainActivity : ComponentActivity() {
                     uiHandler = Handler(Looper.getMainLooper()),
                     onSpeedUpdate = { speedTextView.text = it },
                     shouldCapture = { speed ->
-                        abs(speed) > triggerSpeed && System.currentTimeMillis() - lastCaptureTime > captureInterval
+                        abs(speed) > triggerSpeed
                     },
                     onCapture = { speed ->
-                        lastCaptureTime = System.currentTimeMillis()
                         cameraServiceImpl.startRecording(hasAudioPermission())
                     }
                 )

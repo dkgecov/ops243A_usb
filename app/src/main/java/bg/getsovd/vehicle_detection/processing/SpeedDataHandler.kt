@@ -62,16 +62,18 @@ class SpeedDataHandler (
         return sb.toString().toFloatOrNull()
     }
 
-         private fun isLikelySpeedReport(text: String): Boolean {
+    private fun isLikelySpeedReport(text: String): Boolean {
         return try {
+            val trimmed = text.trim()
+
             // Case 1: Pure number
-            text.trim().toDoubleOrNull() != null ||
+            trimmed.toDoubleOrNull() != null ||
 
                     // Case 2: Unit, value
-                    Regex("""^"(kmph|mph|mps)",-?\d+(\.\d+)?$""", RegexOption.IGNORE_CASE).matches(text.trim()) ||
+                    Regex("""^"(kmph|mph|mps)",-?\d+(\.\d+)?$""", RegexOption.IGNORE_CASE).matches(trimmed) ||
 
                     // Case 3: JSON with "unit" and "speed"
-                    Regex("""\{\s*"unit"\s*:\s*".+?",\s*"speed"\s*:\s*".+?"\s*\}""").containsMatchIn(text)
+                    Regex("""\{\s*"speed"\s*:\s*".+?"(?:\s*,\s*"unit"\s*:\s*".+?")?\s*\}""").containsMatchIn(trimmed)
         } catch (e: Exception) {
             false
         }
