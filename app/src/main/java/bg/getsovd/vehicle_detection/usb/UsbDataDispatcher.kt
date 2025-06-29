@@ -4,6 +4,9 @@ import android.util.Log
 import bg.getsovd.vehicle_detection.processing.SensorDataConsumer
 import com.hoho.android.usbserial.util.SerialInputOutputManager
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.lang.Exception
 import java.util.concurrent.atomic.AtomicReference
 
@@ -21,7 +24,7 @@ object UsbDataDispatcher : SerialInputOutputManager.Listener  {
     }
 
     @Synchronized
-    override fun onNewData(newData: ByteArray?) {// TODO Synchronize
+    override fun onNewData(newData: ByteArray?) {
         Log.d("ThreadCheck", "Running on thread: ${Thread.currentThread().id}")
         if (newData == null) return;
         val latestValue = String(newData, Charsets.UTF_8)
@@ -40,8 +43,10 @@ object UsbDataDispatcher : SerialInputOutputManager.Listener  {
 
     private fun dispatchLine(line: String) {
         consumers.forEach {
-            if (it.isDataSuitable(line)) {
-                it.handleNewData(line)
+            if (it.isDataSuitable(line)) {// Sometimes the order of speed data consuming can be messesd but not a big deal
+                CoroutineScope(Dispatchers.Default).launch {
+                    it.handleNewData(line)
+                }
             }
         }
     }
