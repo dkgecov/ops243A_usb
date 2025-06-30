@@ -5,6 +5,6 @@ import androidx.camera.view.PreviewView
 interface CameraService {
     fun startCamera(previewView: PreviewView)
     fun takePhoto(speed:Float)
-    fun startRecording(recordAudio:Boolean)
+    fun startRecording(recordAudio:Boolean,speed:Float)
     fun stopRecording()
 }

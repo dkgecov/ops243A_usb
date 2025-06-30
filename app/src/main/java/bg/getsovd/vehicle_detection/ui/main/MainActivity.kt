@@ -2,6 +2,7 @@ package bg.getsovd.vehicle_detection.ui.main
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -22,9 +23,11 @@ import android.view.View
 import android.widget.Button
 import android.widget.PopupMenu
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresPermission
 import androidx.camera.core.ImageProxy
 import androidx.camera.view.PreviewView
 
@@ -47,7 +50,13 @@ import bg.getsovd.vehicle_detection.usb.UsbCommandManager
 import bg.getsovd.vehicle_detection.usb.UsbDataDispatcher
 import bg.getsovd.vehicle_detection.usb.exceptions.InvalidSpeedUnitException
 import bg.getsovd.vehicle_detection.usb.exceptions.NoDeviceResponseException
+import bg.getsovd.vehicle_detection.utils.LocationHolder
 import bg.getsovd.vehicle_detection.utils.MessageDisplayer
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.util.SerialInputOutputManager
 import kotlinx.coroutines.CoroutineScope
@@ -80,6 +89,16 @@ class MainActivity : ComponentActivity() {
     private var ACTION_USB_PERMISSION: String = "bg.getsovd.vehicle_detection.USB_PERMISSION"
     private lateinit var currentUnit: SpeedUnit
     private var serialManager:SerialInputOutputManager?=null
+    private val locationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            startLocationUpdates()
+        } else {
+            Toast.makeText(this, "Location permission denied", Toast.LENGTH_SHORT).show()
+            // Optionally disable location features or explain why permission is needed
+        }
+    }
 
     private val usbReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -144,6 +163,7 @@ class MainActivity : ComponentActivity() {
         val sharedPref = getSharedPreferences("AppPrefs", MODE_PRIVATE)
         triggerSpeed = sharedPref.getFloat("TRIGGER_SPEED", defaultTriggerSpeed)
 
+        checkAndRequestLocationPermission()
         // register launcher
         optionsLauncher = registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
@@ -391,7 +411,7 @@ class MainActivity : ComponentActivity() {
                         abs(speed) > triggerSpeed
                     },
                     onCapture = { speed ->
-                        cameraServiceImpl.startRecording(hasAudioPermission())
+                        cameraServiceImpl.startRecording(hasAudioPermission(), speed)
                     }
                 )
 
@@ -461,6 +481,47 @@ class MainActivity : ComponentActivity() {
         val deviceList = usbManager.deviceList
         if (deviceList.isEmpty()) {
             messageDisplayer.showMessage("USB device not found!",MessageType.INFO)
+        }
+    }
+
+    private fun requestLocationPermission() {
+        if (shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) {
+            AlertDialog.Builder(this)
+                .setTitle("Location permission required")
+                .setMessage("Location is used to show speed and coordinates on recorded videos.")
+                .setPositiveButton("Grant") { _, _ ->
+                    locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                }
+                .setNegativeButton("Cancel", null)
+                .show()
+        } else {
+            locationPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        }
+    }
+    @SuppressLint("MissingPermission")
+    private fun startLocationUpdates() {
+        val fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        val locationRequest = LocationRequest.Builder(
+            Priority.PRIORITY_HIGH_ACCURACY,
+            600_000L // 10 minutes
+        ).setMinUpdateIntervalMillis(600_000L).build()
+
+        val locationCallback = object : LocationCallback() {
+            override fun onLocationResult(result: LocationResult) {
+                LocationHolder.currentLocation = result.lastLocation
+            }
+        }
+
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
+    }
+    @SuppressLint("MissingPermission")
+    private fun checkAndRequestLocationPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+            == PackageManager.PERMISSION_GRANTED
+        ) {
+            startLocationUpdates()
+        } else {
+            requestLocationPermission()
         }
     }
 }
