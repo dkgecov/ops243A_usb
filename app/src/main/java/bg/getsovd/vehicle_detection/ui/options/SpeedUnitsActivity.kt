@@ -18,6 +18,7 @@ import bg.getsovd.vehicle_detection.usb.UsbSerialPortService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SpeedUnitsActivity: AppCompatActivity() {
 
@@ -57,12 +58,13 @@ class SpeedUnitsActivity: AppCompatActivity() {
             catch (e:Exception){
                 Log.e("myLog",e.toString())
             }
+                withContext(Dispatchers.Main) {
                 val resultIntent = Intent()
             resultIntent.putExtra(SELECTED_UNITS, selectedUnits)
             resultIntent.putExtra(OPTION_TYPE, OPTION_UNITS)
             setResult(RESULT_OK, resultIntent)
             finish()
-            }
+            }}
         }
     }
     companion object {

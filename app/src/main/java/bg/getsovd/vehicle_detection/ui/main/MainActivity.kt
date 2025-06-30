@@ -62,7 +62,14 @@ import com.hoho.android.usbserial.util.SerialInputOutputManager
 import kotlinx.coroutines.CoroutineScope
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.abs
 
 private const val captureInterval = 5000
@@ -72,6 +79,7 @@ private const val defaultTriggerSpeed = 60f
 private const val CHECK_UNITS_COMMAND = "U?"
 
 class MainActivity : ComponentActivity() {
+    private var overlayUpdateJob: Job? = null
     private var triggerSpeed = defaultTriggerSpeed
     private lateinit var optionsLauncher: ActivityResultLauncher<Intent>
     private val uiHandler: Handler = Handler(Looper.getMainLooper())
@@ -83,6 +91,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var binding: ActivityMainBinding// TODO volatile?
     private lateinit var resultTextView: TextView
     private lateinit var speedTextView: TextView
+    private lateinit var overlayTextView: TextView
     private lateinit var previewView: PreviewView
     private lateinit var infoTextView: TextView
     private lateinit var boundingBoxOverlay: BoundingBoxOverlay
@@ -157,6 +166,7 @@ class MainActivity : ComponentActivity() {
         boundingBoxOverlay = findViewById(R.id.boundingBoxOverlay) // overlay for boxes / visual ad
         speedTextView = findViewById(R.id.speed_field)
         infoTextView=findViewById(R.id.infoTextView)
+        overlayTextView=findViewById(R.id.overlayTextView)
         infoTextView.visibility=View.GONE
         messageDisplayer= MessageDisplayer(infoTextView,uiHandler)
         val optionsButton = findViewById<Button>(R.id.optionsButton)
@@ -178,8 +188,8 @@ class MainActivity : ComponentActivity() {
                         triggerSpeed = selectedSpeed
                     }
                     TriggeringSpeedActivity.OPTION_UNITS -> {
-                        val newUnits = data.getStringExtra(TriggeringSpeedActivity.RESULT_UNITS)
-                        // handle units
+                        val newUnits = data.getStringExtra(SpeedUnitsActivity.SELECTED_UNITS)
+                        this.currentUnit= SpeedUnit.entries.find { it.symbol == newUnits }!!//TODO check for mismatch if blank returned
                     }
                     // add more cases if needed
                 }
@@ -233,6 +243,7 @@ class MainActivity : ComponentActivity() {
             }
             // Start camera
             cameraServiceImpl.startCamera(previewView)
+            startOverlayUpdates();
         }
 
         val usbDeviceInitializer = UsbDeviceInitializer(
@@ -524,4 +535,32 @@ class MainActivity : ComponentActivity() {
             requestLocationPermission()
         }
     }
+    fun startOverlayUpdates() {
+        overlayUpdateJob = CoroutineScope(Dispatchers.Default).launch {
+            while (isActive) {
+                val speed = extractSpeedFromText(speedTextView.text.toString())
+                val location = LocationHolder.currentLocation
+                val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
+
+                val locationText = if (location != null) {
+                    "Lat: %.5f, Lng: %.5f".format(location.latitude, location.longitude)
+                } else {
+                    "Location: N/A"
+                }
+                val unitSymbol = if (::currentUnit.isInitialized) currentUnit.symbol else ""
+                val overlayText = "Time: $time\nSpeed: %.1f %s\n$locationText".format(speed, unitSymbol)
+                withContext(Dispatchers.Main) {
+                    overlayTextView.text = overlayText
+                }
+
+                delay(250L)
+            }
+        }
+    }
+    fun extractSpeedFromText(text: String): Float {
+        val regex = Regex("""-?\d+(\.\d+)?""")
+        val match = regex.find(text)
+        return match?.value?.toFloatOrNull() ?: 0f
+    }
+
 }

@@ -58,7 +58,6 @@ class TriggeringSpeedActivity : AppCompatActivity() {
     }
 
     companion object {
-        const val  RESULT_UNITS= "result_units"
         const val OPTION_TYPE = "option_type"
         const val OPTION_TRIGGER_SPEED = "trigger_speed"
         const val OPTION_UNITS = "units"

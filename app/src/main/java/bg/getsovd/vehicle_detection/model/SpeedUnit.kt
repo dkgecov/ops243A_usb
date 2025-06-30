@@ -3,6 +3,7 @@ package bg.getsovd.vehicle_detection.model
 import bg.getsovd.vehicle_detection.usb.exceptions.InvalidSpeedUnitException
 
 enum class SpeedUnit(val symbol: String) {
+
     KPH("km/h"),
     MPH("mph"),
     MPS("m/s");
