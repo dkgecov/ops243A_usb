@@ -16,12 +16,13 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="top|start"
-        android:layout_margin="16dp"
-        android:background="@android:color/transparent"
+        android:layout_marginTop="0dp"
+        android:layout_marginStart="2dp"
         android:text="Overlay: speed/time"
-        android:textColor="@android:color/white"
-        android:textSize="16sp"
-        android:padding="4dp" />
+        android:textColor="#00b300"
+    android:textSize="12sp"
+    android:textStyle="bold"
+    android:padding="0dp" />
 
     <!-- Bounding Box Overlay (Hidden by Default) -->
     <bg.getsovd.vehicle_detection.model.BoundingBoxOverlay
@@ -78,7 +79,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="top"
-        android:background="@android:drawable/screen_background_dark_transparent"
+        android:background="#55000000"
         android:elevation="4dp"
         android:gravity="center"
         android:orientation="vertical"
