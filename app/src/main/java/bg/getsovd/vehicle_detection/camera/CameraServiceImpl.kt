@@ -90,9 +90,9 @@ class CameraServiceImpl(
 
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    override fun startRecording(recordAudio:Boolean,speed:Float) {
+    override fun startRecording(recordAudio:Boolean,textToBurn:String) {
         check(::videoProcessor.isInitialized) { "Camera not started. Call startCamera() first." }
-        videoProcessor.startVideoRecording(recordAudio,speed)
+        videoProcessor.startVideoRecording(recordAudio,textToBurn)
     }
 
     override fun stopRecording() {

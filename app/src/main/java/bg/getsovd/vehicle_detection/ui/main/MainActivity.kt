@@ -421,8 +421,8 @@ class MainActivity : ComponentActivity() {
                     shouldCapture = { speed ->
                         abs(speed) > triggerSpeed
                     },
-                    onCapture = { speed ->
-                        cameraServiceImpl.startRecording(hasAudioPermission(), speed)
+                    onCapture = {
+                        cameraServiceImpl.startRecording(hasAudioPermission(), overlayTextView.text.toString())
                     }
                 )
 

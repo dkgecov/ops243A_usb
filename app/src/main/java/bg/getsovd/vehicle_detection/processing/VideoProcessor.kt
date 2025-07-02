@@ -27,9 +27,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-
+import com.arthenica.ffmpegkit.FFmpegKit
+import com.arthenica.ffmpegkit.ReturnCode
 import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -43,7 +44,7 @@ class VideoProcessor (private val videoCapture: VideoCapture<Recorder>,
     @Volatile private var isRecording = false
     private val outputDir = StorageUtils.getOutputDirectory(context)
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    fun startVideoRecording(includeAudio: Boolean, speed:Float) {
+    fun startVideoRecording(includeAudio: Boolean, textToBurn:String) {
         if (isRecording) return
         isRecording = true
 
@@ -75,6 +76,24 @@ class VideoProcessor (private val videoCapture: VideoCapture<Recorder>,
                     is VideoRecordEvent.Finalize -> {
                         Log.d("CameraX", "Video saved: ${file.absolutePath}")
                         isRecording = false // ✅ Release the flag here
+
+                        CoroutineScope(Dispatchers.IO).launch {
+                            try {
+                                val overlayOutputFile = File(outputDir, "VID_OVERLAY_${System.currentTimeMillis()}.mp4")
+                                val lines = textToBurn.split("\n")
+                                Log.d("FFmpeg","Element after split:"+lines.get(0)+","+lines.get(1)+","+lines.get(2))
+                                val safeLines=escapeLinesForFfmpegDrawtext(lines)
+                                burnOverlayToVideo(
+                                    inputFile = file,
+                                    outputFile = overlayOutputFile,
+                                    fontPath =  copyFontFromAssets(context, "Roboto-Regular.ttf"),
+                                    lines = safeLines
+                                )
+                                Log.d("FFmpeg", "Overlay processing started.")
+                            } catch (e: Exception) {
+                                Log.e("FFmpeg", "Failed to burn overlay", e)
+                            }
+                        }
                     }
                 }
             }
@@ -85,6 +104,69 @@ class VideoProcessor (private val videoCapture: VideoCapture<Recorder>,
             throw e
         }
     }
+    private fun buildFfmpegOverlayCommand(
+        inputPath: String,
+        outputPath: String,
+        fontPath: String,
+        lines: List<String>
+    ): Array<String> {
+        Log.d("FFmpeg","just before building the command:"+lines.toString())
+        return arrayOf(
+            "-i", inputPath,
+            "-vf", "drawtext=fontfile='$fontPath':text='${lines[0]}':x=10:y=10:fontsize=24:fontcolor=white:box=1:boxcolor=0x00000099," +
+                    "drawtext=fontfile='$fontPath':text='${lines[1]}':x=10:y=50:fontsize=24:fontcolor=white:box=1:boxcolor=0x00000099," +
+                    "drawtext=fontfile='$fontPath':text='${lines[2]}':x=10:y=90:fontsize=24:fontcolor=white:box=1:boxcolor=0x00000099",
+            "-c:v", "h264",
+            "-b:v", "4M",
+            "-maxrate", "4M",
+            "-bufsize", "8M",
+            "-preset", "fast",
+            "-c:a", "copy",
+            outputPath
+        )
+    }
+    private fun burnOverlayToVideo(
+        inputFile: File,
+        outputFile: File,
+        fontPath: String,
+        lines: List<String>
+    ) {
+        val command = buildFfmpegOverlayCommand(
+            inputPath = inputFile.absolutePath,
+            outputPath = outputFile.absolutePath,
+            fontPath = fontPath,
+            lines = lines
+        )
+
+        FFmpegKit.executeAsync(command.joinToString(" ")) { session ->
+            val returnCode = session.returnCode
+            if (ReturnCode.isSuccess(returnCode)) {
+                Log.d("FFmpeg", "Overlay written successfully: ${outputFile.absolutePath}")
+            } else {
+               Log.d("FFmpeg", "Overlay failed")
+            }
+        }
+    }
+    private fun copyFontFromAssets(context: Context, assetFileName: String): String {
+        val file = File(context.filesDir, assetFileName)
+        if (!file.exists()) {
+            context.assets.open(assetFileName).use { inputStream ->
+                FileOutputStream(file).use { outputStream ->
+                    inputStream.copyTo(outputStream)
+                }
+            }
+        }
+        return file.absolutePath
+    }
 
 
+    private fun escapeForFfmpegDrawtext(text: String): String {
+        return text
+            .replace(":", "\\\\:")
+            .replace(",", "\\,")
+    }
+
+    private fun escapeLinesForFfmpegDrawtext(lines: List<String>): List<String> {
+        return lines.map { line -> escapeForFfmpegDrawtext(line) }
+    }
 }

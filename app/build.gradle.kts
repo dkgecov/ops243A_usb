@@ -65,6 +65,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation ("com.github.mik3y:usb-serial-for-android:3.8.0")
+    implementation ("com.mrljdx:ffmpeg-kit-full:6.0")
     implementation ("com.google.android.gms:play-services-location:21.0.1")
 
 
