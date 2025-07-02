@@ -19,6 +19,7 @@ import androidx.lifecycle.LifecycleOwner
 import bg.getsovd.vehicle_detection.processing.ImageProcessor
 import bg.getsovd.vehicle_detection.processing.VideoProcessor
 import java.io.Closeable
+import java.util.Queue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -90,9 +91,9 @@ class CameraServiceImpl(
 
 
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    override fun startRecording(recordAudio:Boolean,textToBurn:String) {
+    override fun startRecording(recordAudio:Boolean,recentSpeeds: Queue<Float>) {
         check(::videoProcessor.isInitialized) { "Camera not started. Call startCamera() first." }
-        videoProcessor.startVideoRecording(recordAudio,textToBurn)
+        videoProcessor.startVideoRecording(recordAudio,recentSpeeds)
     }
 
     override fun stopRecording() {

@@ -27,7 +27,6 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresPermission
 import androidx.camera.core.ImageProxy
 import androidx.camera.view.PreviewView
 
@@ -50,14 +49,15 @@ import bg.getsovd.vehicle_detection.usb.UsbCommandManager
 import bg.getsovd.vehicle_detection.usb.UsbDataDispatcher
 import bg.getsovd.vehicle_detection.usb.exceptions.InvalidSpeedUnitException
 import bg.getsovd.vehicle_detection.usb.exceptions.NoDeviceResponseException
-import bg.getsovd.vehicle_detection.utils.LocationHolder
+import bg.getsovd.vehicle_detection.utils.TrackingData
 import bg.getsovd.vehicle_detection.utils.MessageDisplayer
+import bg.getsovd.vehicle_detection.utils.OverlayUtils
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
-import com.hoho.android.usbserial.driver.UsbSerialPort
+import com.google.common.collect.EvictingQueue
 import com.hoho.android.usbserial.util.SerialInputOutputManager
 import kotlinx.coroutines.CoroutineScope
 
@@ -67,26 +67,22 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.Queue
 import kotlin.math.abs
 
-private const val captureInterval = 5000
-
 private const val defaultTriggerSpeed = 60f
-
 private const val CHECK_UNITS_COMMAND = "U?"
 
 class MainActivity : ComponentActivity() {
     private var overlayUpdateJob: Job? = null
     private var triggerSpeed = defaultTriggerSpeed
+    private lateinit var recentSpeedData: Queue<Float>
     private lateinit var optionsLauncher: ActivityResultLauncher<Intent>
     private val uiHandler: Handler = Handler(Looper.getMainLooper())
     private  lateinit var messageDisplayer:MessageDisplayer
     private lateinit var cameraServiceImpl: CameraServiceImpl
     private  val CAMERA_PERMISSION_REQUEST_CODE = 1001
-    private val RECORD_AUDIO_REQUEST_CODE = 101
+    private val RECORD_AUDIO_REQUEST_CODE = 101//TODO const?
     @Volatile
     private lateinit var binding: ActivityMainBinding// TODO volatile?
     private lateinit var resultTextView: TextView
@@ -96,7 +92,6 @@ class MainActivity : ComponentActivity() {
     private lateinit var infoTextView: TextView
     private lateinit var boundingBoxOverlay: BoundingBoxOverlay
     private var ACTION_USB_PERMISSION: String = "bg.getsovd.vehicle_detection.USB_PERMISSION"
-    private lateinit var currentUnit: SpeedUnit
     private var serialManager:SerialInputOutputManager?=null
     private val locationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -189,7 +184,7 @@ class MainActivity : ComponentActivity() {
                     }
                     TriggeringSpeedActivity.OPTION_UNITS -> {
                         val newUnits = data.getStringExtra(SpeedUnitsActivity.SELECTED_UNITS)
-                        this.currentUnit= SpeedUnit.entries.find { it.symbol == newUnits }!!//TODO check for mismatch if blank returned
+                        TrackingData.currentSpeedUnits = SpeedUnit.entries.find { it.symbol == newUnits }!!//TODO check for mismatch if blank returned
                     }
                     // add more cases if needed
                 }
@@ -422,7 +417,8 @@ class MainActivity : ComponentActivity() {
                         abs(speed) > triggerSpeed
                     },
                     onCapture = {
-                        cameraServiceImpl.startRecording(hasAudioPermission(), overlayTextView.text.toString())
+                        Log.d("capturetimeStart", System.nanoTime().toString())
+                        cameraServiceImpl.startRecording(hasAudioPermission(), recentSpeedData)
                     }
                 )
 
@@ -439,9 +435,10 @@ class MainActivity : ComponentActivity() {
                     Log.d("myLog", "will sync units")
                     val response = UsbCommandManager. sendCommand(CHECK_UNITS_COMMAND, port)
                     Log.d("myLog", "response: $response")
-                        currentUnit = SpeedUnit.fromResponse(response)
-                        messageDisplayer.showMessage(
-                            "Retrieved device default speed units: ${currentUnit.symbol}",
+                    val currentSpeedUnit = SpeedUnit.fromResponse(response)
+                    TrackingData.currentSpeedUnits = currentSpeedUnit
+                    messageDisplayer.showMessage(
+                            "Retrieved device default speed units: ${currentSpeedUnit.symbol}",
                             MessageType.INFO,
                             5000
                         )
@@ -467,7 +464,7 @@ class MainActivity : ComponentActivity() {
             val runtime = Runtime.getRuntime()
             val usedMemory = runtime.totalMemory() - runtime.freeMemory()
            // println("Used memory: $usedMemory bytes")
-            messageDisplayer.showMessage(usedMemory.toString(),MessageType.WARNING,5000)
+           // messageDisplayer.showMessage(usedMemory.toString(),MessageType.WARNING,5000)
         }
     }
     override fun onDestroy() {
@@ -519,7 +516,7 @@ class MainActivity : ComponentActivity() {
 
         val locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
-                LocationHolder.currentLocation = result.lastLocation
+                TrackingData.currentLocation = result.lastLocation
             }
         }
 
@@ -537,23 +534,15 @@ class MainActivity : ComponentActivity() {
     }
     fun startOverlayUpdates() {
         overlayUpdateJob = CoroutineScope(Dispatchers.Default).launch {
+            recentSpeedData= EvictingQueue.create(30);//TODO video_duration/delay=55
             while (isActive) {
                 val speed = extractSpeedFromText(speedTextView.text.toString())
-                val location = LocationHolder.currentLocation
-                val time = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-
-                val locationText = if (location != null) {
-                    "Lat: %.5f, Lng: %.5f".format(location.latitude, location.longitude)
-                } else {
-                    "Location: N/A"
-                }
-                val unitSymbol = if (::currentUnit.isInitialized) currentUnit.symbol else ""
-                val overlayText = "Time: $time\nSpeed: %.1f %s\n$locationText".format(speed, unitSymbol)
+                val overlayText = OverlayUtils.buildOverlay(speed)
                 withContext(Dispatchers.Main) {
                     overlayTextView.text = overlayText
                 }
-
-                delay(250L)
+                recentSpeedData.add(speed)
+                delay(200L)
             }
         }
     }

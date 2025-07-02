@@ -17,7 +17,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="top|start"
         android:layout_margin="16dp"
-        android:background="#66000000"
+        android:background="@android:color/transparent"
         android:text="Overlay: speed/time"
         android:textColor="@android:color/white"
         android:textSize="16sp"

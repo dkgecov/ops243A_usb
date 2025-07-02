@@ -1,9 +1,9 @@
 package bg.getsovd.vehicle_detection.utils
 
 import android.location.Location
+import bg.getsovd.vehicle_detection.model.SpeedUnit
 
-object LocationHolder {
+object TrackingData {
     var currentLocation: Location? = null
-    val currentSpeedKmh: Float
-        get() = currentLocation?.speed?.times(3.6f) ?: 0f
+    var currentSpeedUnits:SpeedUnit?=null
 }

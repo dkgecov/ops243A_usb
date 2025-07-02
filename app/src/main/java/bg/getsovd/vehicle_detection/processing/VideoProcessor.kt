@@ -1,27 +1,15 @@
 package bg.getsovd.vehicle_detection.processing
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.Color
-import android.graphics.Paint
-import android.location.Location
-import android.media.MediaCodec
-import android.media.MediaCodecInfo
-import android.media.MediaExtractor
-import android.media.MediaFormat
-import android.media.MediaMuxer
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
-import android.widget.Toast
 import androidx.annotation.RequiresPermission
 import androidx.camera.video.FileOutputOptions
 import androidx.camera.video.Recorder
 import androidx.camera.video.Recording
 import androidx.camera.video.VideoCapture
 import androidx.camera.video.VideoRecordEvent
-import bg.getsovd.vehicle_detection.utils.LocationHolder
+import bg.getsovd.vehicle_detection.utils.OverlayUtils
 import bg.getsovd.vehicle_detection.utils.StorageUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,9 +19,7 @@ import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.ReturnCode
 import java.io.File
 import java.io.FileOutputStream
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import java.util.Queue
 import java.util.concurrent.ExecutorService
 
 private const val videoDuration = 5000L
@@ -44,7 +30,7 @@ class VideoProcessor (private val videoCapture: VideoCapture<Recorder>,
     @Volatile private var isRecording = false
     private val outputDir = StorageUtils.getOutputDirectory(context)
     @RequiresPermission(Manifest.permission.RECORD_AUDIO)
-    fun startVideoRecording(includeAudio: Boolean, textToBurn:String) {
+    fun startVideoRecording(includeAudio: Boolean, recentSpeeds:Queue<Float>) {
         if (isRecording) return
         isRecording = true
 
@@ -80,6 +66,9 @@ class VideoProcessor (private val videoCapture: VideoCapture<Recorder>,
                         CoroutineScope(Dispatchers.IO).launch {
                             try {
                                 val overlayOutputFile = File(outputDir, "VID_OVERLAY_${System.currentTimeMillis()}.mp4")
+                                Log.d("MyLog","recent speeds:"+recentSpeeds.toString())
+                                Log.d("capturetimeEnd", System.nanoTime().toString())
+                                val textToBurn = OverlayUtils.buildOverlay(recentSpeeds.maxByOrNull { kotlin.math.abs(it)})
                                 val lines = textToBurn.split("\n")
                                 Log.d("FFmpeg","Element after split:"+lines.get(0)+","+lines.get(1)+","+lines.get(2))
                                 val safeLines=escapeLinesForFfmpegDrawtext(lines)
@@ -114,8 +103,8 @@ class VideoProcessor (private val videoCapture: VideoCapture<Recorder>,
         return arrayOf(
             "-i", inputPath,
             "-vf", "drawtext=fontfile='$fontPath':text='${lines[0]}':x=10:y=10:fontsize=24:fontcolor=white:box=1:boxcolor=0x00000099," +
-                    "drawtext=fontfile='$fontPath':text='${lines[1]}':x=10:y=50:fontsize=24:fontcolor=white:box=1:boxcolor=0x00000099," +
-                    "drawtext=fontfile='$fontPath':text='${lines[2]}':x=10:y=90:fontsize=24:fontcolor=white:box=1:boxcolor=0x00000099",
+                    "drawtext=fontfile='$fontPath':text='${lines[1]}':x=10:y=35:fontsize=24:fontcolor=white:box=1:boxcolor=0x00000099," +
+                    "drawtext=fontfile='$fontPath':text='${lines[2]}':x=10:y=60:fontsize=24:fontcolor=white:box=1:boxcolor=0x00000099",
             "-c:v", "h264",
             "-b:v", "4M",
             "-maxrate", "4M",
