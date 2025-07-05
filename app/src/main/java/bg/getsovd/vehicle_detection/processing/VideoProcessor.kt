@@ -105,14 +105,16 @@ class VideoProcessor (private val videoCapture: VideoCapture<Recorder>,
             "-vf", "drawtext=fontfile='$fontPath':text='${lines[0]}':x=10:y=10:fontsize=24:fontcolor=white:box=1:boxcolor=0x00000099," +
                     "drawtext=fontfile='$fontPath':text='${lines[1]}':x=10:y=35:fontsize=24:fontcolor=white:box=1:boxcolor=0x00000099," +
                     "drawtext=fontfile='$fontPath':text='${lines[2]}':x=10:y=60:fontsize=24:fontcolor=white:box=1:boxcolor=0x00000099",
-            "-c:v", "h264",
-            "-b:v", "4M",
-            "-maxrate", "4M",
-            "-bufsize", "8M",
-            "-preset", "fast",
+            "-c:v", "hevc_mediacodec",
+            "-b:v", "10M",        // Increase bitrate for better quality
+            "-maxrate", "10M",
+            "-bufsize", "20M",
             "-c:a", "copy",
             outputPath
-        )
+        )/* "-c:v", "hevc_mediacodec",
+            "-b:v", "4M",
+            "-c:a", "copy",
+            outputPath*/
     }
     private fun burnOverlayToVideo(
         inputFile: File,
