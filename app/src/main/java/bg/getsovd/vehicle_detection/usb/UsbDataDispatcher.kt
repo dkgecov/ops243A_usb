@@ -33,7 +33,7 @@ object UsbDataDispatcher : SerialInputOutputManager.Listener  {
             Log.d("myLog", "buffering...$latestValue")
             incomingBuffer.append(latestValue)
             Log.d("myLog", "dispatching buffer: $incomingBuffer")
-            dispatchLine(incomingBuffer.toString())//TODO blocking, async ?
+            dispatchLine(incomingBuffer.toString())//TODO blocking while looping, async ?
             incomingBuffer.clear()
         } else {
             Log.d("myLog", "buffering...$latestValue")

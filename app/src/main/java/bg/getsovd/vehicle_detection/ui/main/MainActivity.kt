@@ -433,7 +433,7 @@ class MainActivity : ComponentActivity() {
 
                 try {
                     Log.d("myLog", "will sync units")
-                    val response = UsbCommandManager. sendCommand(CHECK_UNITS_COMMAND, port)
+                    val response = UsbCommandManager. sendCommand(CHECK_UNITS_COMMAND, port)// calls suspend function here
                     Log.d("myLog", "response: $response")
                     val currentSpeedUnit = SpeedUnit.fromResponse(response)
                     TrackingData.currentSpeedUnits = currentSpeedUnit
@@ -542,7 +542,7 @@ class MainActivity : ComponentActivity() {
                     overlayTextView.text = overlayText
                 }
                 recentSpeedData.add(speed)
-                delay(200L)
+                delay(200L)//TODO beware uf UI thread overload, no throttling
             }
         }
     }

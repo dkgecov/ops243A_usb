@@ -111,10 +111,7 @@ class VideoProcessor (private val videoCapture: VideoCapture<Recorder>,
             "-bufsize", "20M",
             "-c:a", "copy",
             outputPath
-        )/* "-c:v", "hevc_mediacodec",
-            "-b:v", "4M",
-            "-c:a", "copy",
-            outputPath*/
+        )
     }
     private fun burnOverlayToVideo(
         inputFile: File,

@@ -28,7 +28,7 @@ object UsbCommandManager : SensorDataConsumer{
             try {
                 // Wait up to 300ms for the response
                 val response = withTimeout(300) {
-                    responseDeferred.await()
+                    responseDeferred.await()// waits until completed from  pendingResponse?.complete(line) in handleNewData or until 300 ms pass
                 }
                 return response
             } finally {
@@ -44,6 +44,6 @@ object UsbCommandManager : SensorDataConsumer{
     }
 
     override fun isDataSuitable(line: String): Boolean {
-        return waitingForResponse;
+        return waitingForResponse && !UsbDataParsers.isLikelySpeedReport(line)
     }
 }

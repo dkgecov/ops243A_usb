@@ -2,6 +2,7 @@ package bg.getsovd.vehicle_detection.processing
 
 import android.os.Handler
 import android.util.Log
+import bg.getsovd.vehicle_detection.usb.UsbDataParsers
 
 private const val CR = 13.toByte()  // Carriage Return
 private const val LF = 10.toByte()  // Line Feed
@@ -24,7 +25,7 @@ class SpeedDataHandler (
     }
 
     override fun isDataSuitable(line: String): Boolean {
-        return isLikelySpeedReport(line)
+        return UsbDataParsers.isLikelySpeedReport(line)
     }
 
     private fun processLine(line: String) {
@@ -62,20 +63,5 @@ class SpeedDataHandler (
         return sb.toString().toFloatOrNull()
     }
 
-    private fun isLikelySpeedReport(text: String): Boolean {
-        return try {
-            val trimmed = text.trim()
 
-            // Case 1: Pure number
-            trimmed.toDoubleOrNull() != null ||
-
-                    // Case 2: Unit, value
-                    Regex("""^"(kmph|mph|mps)",-?\d+(\.\d+)?$""", RegexOption.IGNORE_CASE).matches(trimmed) ||
-
-                    // Case 3: JSON with "unit" and "speed"
-                    Regex("""\{\s*"speed"\s*:\s*".+?"(?:\s*,\s*"unit"\s*:\s*".+?")?\s*\}""").containsMatchIn(trimmed)
-        } catch (e: Exception) {
-            false
-        }
-    }
 }
