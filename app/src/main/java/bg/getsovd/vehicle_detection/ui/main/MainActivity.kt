@@ -35,6 +35,10 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import bg.getsovd.vehicle_detection.R
 import bg.getsovd.vehicle_detection.camera.CameraServiceImpl
+import bg.getsovd.vehicle_detection.config.AppConfig.CAMERA_STARTUP_LATENCY_MS
+import bg.getsovd.vehicle_detection.config.AppConfig.DEFAULT_TRIGGER_SPEED
+import bg.getsovd.vehicle_detection.config.AppConfig.OVERLAY_UPDATES_INTERVAL_MS
+import bg.getsovd.vehicle_detection.config.AppConfig.VIDEO_DURATION_MS
 import bg.getsovd.vehicle_detection.databinding.ActivityMainBinding
 import bg.getsovd.vehicle_detection.model.SpeedUnit
 import bg.getsovd.vehicle_detection.processing.SpeedDataHandler
@@ -70,12 +74,12 @@ import kotlinx.coroutines.withContext
 import java.util.Queue
 import kotlin.math.abs
 
-private const val defaultTriggerSpeed = 60f
+
 private const val CHECK_UNITS_COMMAND = "U?"
 
 class MainActivity : ComponentActivity() {
     private var overlayUpdateJob: Job? = null
-    private var triggerSpeed = defaultTriggerSpeed
+    private var triggerSpeed = DEFAULT_TRIGGER_SPEED
     private lateinit var recentSpeedData: Queue<Float>
     private lateinit var optionsLauncher: ActivityResultLauncher<Intent>
     private val uiHandler: Handler = Handler(Looper.getMainLooper())
@@ -166,7 +170,7 @@ class MainActivity : ComponentActivity() {
         messageDisplayer= MessageDisplayer(infoTextView,uiHandler)
         val optionsButton = findViewById<Button>(R.id.optionsButton)
         val sharedPref = getSharedPreferences("AppPrefs", MODE_PRIVATE)
-        triggerSpeed = sharedPref.getFloat("TRIGGER_SPEED", defaultTriggerSpeed)
+        triggerSpeed = sharedPref.getFloat("TRIGGER_SPEED", DEFAULT_TRIGGER_SPEED)
 
         checkAndRequestLocationPermission()
         // register launcher
@@ -533,8 +537,9 @@ class MainActivity : ComponentActivity() {
         }
     }
     fun startOverlayUpdates() {
+        require(OVERLAY_UPDATES_INTERVAL_MS > 0) { "Overlay update interval must be greater than 0" }
         overlayUpdateJob = CoroutineScope(Dispatchers.Default).launch {
-            recentSpeedData= EvictingQueue.create(30);//TODO video_duration/delay=55
+            recentSpeedData = EvictingQueue.create(((VIDEO_DURATION_MS+CAMERA_STARTUP_LATENCY_MS)/OVERLAY_UPDATES_INTERVAL_MS).toInt())
             while (isActive) {
                 val speed = extractSpeedFromText(speedTextView.text.toString())
                 val overlayText = OverlayUtils.buildOverlay(speed)
@@ -542,11 +547,11 @@ class MainActivity : ComponentActivity() {
                     overlayTextView.text = overlayText
                 }
                 recentSpeedData.add(speed)
-                delay(200L)//TODO beware uf UI thread overload, no throttling
+                delay(OVERLAY_UPDATES_INTERVAL_MS)//TODO beware uf UI thread overload, no throttling
             }
         }
     }
-    fun extractSpeedFromText(text: String): Float {
+    private fun extractSpeedFromText(text: String): Float {
         val regex = Regex("""-?\d+(\.\d+)?""")
         val match = regex.find(text)
         return match?.value?.toFloatOrNull() ?: 0f

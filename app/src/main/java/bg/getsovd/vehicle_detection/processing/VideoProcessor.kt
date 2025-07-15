@@ -9,6 +9,8 @@ import androidx.camera.video.Recorder
 import androidx.camera.video.Recording
 import androidx.camera.video.VideoCapture
 import androidx.camera.video.VideoRecordEvent
+import bg.getsovd.vehicle_detection.config.AppConfig
+import bg.getsovd.vehicle_detection.config.AppConfig.VIDEO_DURATION_MS
 import bg.getsovd.vehicle_detection.utils.OverlayUtils
 import bg.getsovd.vehicle_detection.utils.StorageUtils
 import kotlinx.coroutines.CoroutineScope
@@ -21,8 +23,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.Queue
 import java.util.concurrent.ExecutorService
-
-private const val videoDuration = 5000L
 
 class VideoProcessor (private val videoCapture: VideoCapture<Recorder>,
                       private val sharedExecutor: ExecutorService, private val context: Context
@@ -54,7 +54,7 @@ class VideoProcessor (private val videoCapture: VideoCapture<Recorder>,
 
                         // Launch a coroutine to stop after 5 seconds
                         CoroutineScope(Dispatchers.Default).launch {
-                            delay(videoDuration)
+                            delay(VIDEO_DURATION_MS)
                             recording?.stop()
                         }
                     }
