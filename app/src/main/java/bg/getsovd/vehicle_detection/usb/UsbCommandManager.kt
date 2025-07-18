@@ -6,6 +6,7 @@ import bg.getsovd.vehicle_detection.processing.SensorDataConsumer
 import bg.getsovd.vehicle_detection.usb.exceptions.NoDeviceResponseException
 import com.hoho.android.usbserial.driver.UsbSerialPort
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeout
@@ -31,7 +32,11 @@ object UsbCommandManager : SensorDataConsumer{
                     responseDeferred.await()// waits until completed from  pendingResponse?.complete(line) in handleNewData or until 300 ms pass
                 }
                 return response
-            } finally {
+            }catch (e: TimeoutCancellationException) {
+                Log.w("UsbCommandManager", "Timeout while waiting for device response. No response received within expected time.", e)
+                throw NoDeviceResponseException()
+            }
+            finally {
                 pendingResponse = null // Clear on success or failure
                 waitingForResponse = false
             }

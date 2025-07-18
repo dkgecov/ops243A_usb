@@ -52,6 +52,6 @@ object UsbDataDispatcher : SerialInputOutputManager.Listener  {
     }
 
     override fun onRunError(e: Exception?) {
-        Log.e("myLog",e.toString())
+        Log.e("USBSerial", "I/O error in USB serial communication", e)
     }
 }

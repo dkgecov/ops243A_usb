@@ -16,7 +16,7 @@ object UsbSerialPortService {
         return serialPort ?: throw IllegalStateException("Serial port not initialized")
     }
     fun getConnection(): UsbDeviceConnection {
-        return connection ?: throw IllegalStateException("Connectiont not initialized")
+        return connection ?: throw IllegalStateException("Connection not initialized")
     }
     fun initializePort(device: UsbDevice,usbManager: UsbManager): UsbSerialPort {
         val driver = UsbSerialProber.getDefaultProber().probeDevice(device)

@@ -183,7 +183,7 @@ class MainActivity : ComponentActivity() {
 
                 when (optionType) {
                     TriggeringSpeedActivity.OPTION_TRIGGER_SPEED -> {
-                        val selectedSpeed = data.getFloatExtra(TriggeringSpeedActivity.SELECTED_TRIGGER_SPEED, 70f)
+                        val selectedSpeed = data.getFloatExtra(TriggeringSpeedActivity.SELECTED_TRIGGER_SPEED, DEFAULT_TRIGGER_SPEED)
                         triggerSpeed = selectedSpeed
                     }
                     TriggeringSpeedActivity.OPTION_UNITS -> {
@@ -434,37 +434,40 @@ class MainActivity : ComponentActivity() {
                 val manager = SerialInputOutputManager(port, UsbDataDispatcher)// use local variable to avoid null issues
                 serialManager = manager
                 manager.start()
-
-                try {
-                    Log.d("myLog", "will sync units")
-                    val response = UsbCommandManager. sendCommand(CHECK_UNITS_COMMAND, port)// calls suspend function here
-                    Log.d("myLog", "response: $response")
-                    val currentSpeedUnit = SpeedUnit.fromResponse(response)
-                    TrackingData.currentSpeedUnits = currentSpeedUnit
-                    messageDisplayer.showMessage(
-                            "Retrieved device default speed units: ${currentSpeedUnit.symbol}",
-                            MessageType.INFO,
-                            5000
-                        )
-                } catch (e: NoDeviceResponseException) {
-                    Log.e("myLog", "Error retrieving device default speed units, no device response", e)
-
-                        messageDisplayer.showMessage(
-                            "Failed to retrieve device speed units. " +
-                                    "This can lead to improper behaviour. Refer to the device user manual to check default units reporting",
-                            MessageType.WARNING
-                        )
-                } catch (e: InvalidSpeedUnitException) {
-                    Log.e("myLog", "Error retrieving speed units from response", e)
-                        messageDisplayer.showMessage(
-                            "Failed to retrieve device speed units. " +
-                                    "This can lead to improper behaviour. Refer to the device user manual to check default units reporting",
-                            MessageType.WARNING
-                        )
-                }
             } catch (e: Exception) {
-                Log.e(TAG, "Error initializing port or starting listener", e)
+                Log.e("myLog", "Error initializing port or starting listener", e)
             }
+
+
+            try {
+                val port = UsbSerialPortService.getSerialPort()
+                Log.d("myLog", "will sync units")
+                val response = UsbCommandManager. sendCommand(CHECK_UNITS_COMMAND, port)// calls suspend function here
+                Log.d("myLog", "response: $response")
+                val currentSpeedUnit = SpeedUnit.fromResponse(response)
+                TrackingData.currentSpeedUnits = currentSpeedUnit
+                messageDisplayer.showMessage(
+                    "Retrieved device default speed units: ${currentSpeedUnit.symbol}",
+                    MessageType.INFO,
+                    5000
+                )
+            } catch (e: NoDeviceResponseException) {
+                Log.e("myLog", "Error retrieving device default speed units, no device response", e)
+
+                messageDisplayer.showMessage(
+                    "Failed to retrieve device speed units. " +
+                            "This can lead to improper behaviour. Refer to the device user manual to check default units reporting",
+                    MessageType.WARNING
+                )
+            } catch (e: InvalidSpeedUnitException) {
+                Log.e("myLog", "Error retrieving speed units from response", e)
+                messageDisplayer.showMessage(
+                    "Failed to retrieve device speed units. " +
+                            "This can lead to improper behaviour. Refer to the device user manual to check default units reporting",
+                    MessageType.WARNING
+                )
+            }
+
             val runtime = Runtime.getRuntime()
             val usedMemory = runtime.totalMemory() - runtime.freeMemory()
            // println("Used memory: $usedMemory bytes")
