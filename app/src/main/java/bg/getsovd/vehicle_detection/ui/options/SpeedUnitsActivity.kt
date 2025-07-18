@@ -16,22 +16,25 @@ import bg.getsovd.vehicle_detection.ui.options.TriggeringSpeedActivity.Companion
 import bg.getsovd.vehicle_detection.ui.options.TriggeringSpeedActivity.Companion.SELECTED_TRIGGER_SPEED
 import bg.getsovd.vehicle_detection.usb.UsbCommandManager
 import bg.getsovd.vehicle_detection.usb.UsbSerialPortService
+import com.hoho.android.usbserial.driver.UsbSerialPort
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class SpeedUnitsActivity: AppCompatActivity() {
+class SpeedUnitsActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (intent.getStringExtra(OPTION_TYPE)== OPTION_UNITS) {
+        if (intent.getStringExtra(OPTION_TYPE) == OPTION_UNITS) {
             setupSpeedUnitsUI()
-        }else{
+        } else {
             //TODO invalid option
         }
     }
-    private fun setupSpeedUnitsUI(){
+
+    private fun setupSpeedUnitsUI() {
         setContentView(R.layout.activity_speed_units)
         val spinner: Spinner = findViewById(R.id.speedUnitsSpinner)
         val adapter = ArrayAdapter.createFromResource(
@@ -45,37 +48,72 @@ class SpeedUnitsActivity: AppCompatActivity() {
         val saveButton = findViewById<Button>(R.id.saveButton)
         saveButton.setOnClickListener {
             CoroutineScope(Dispatchers.IO).launch {
-            val selectedUnits=spinner.selectedItem.toString()
-            var command:String = ""
-            when(selectedUnits){
-                SpeedUnit.KPH.symbol->{command="UK"}
-                SpeedUnit.MPH.symbol->{command="US"}
-                SpeedUnit.MPS.symbol->{command="UM"}
-                //else -> command = ""
-            }
-            try{
-                var serialPort = UsbSerialPortService.getSerialPort()
-            UsbCommandManager.sendCommand(command,serialPort) }//TODO in coroutine now, should  it all be in?
-            catch (e:Exception){
-                Log.e("myLog",e.toString())
-            }
-                withContext(Dispatchers.Main) {
-                    Toast.makeText(this@SpeedUnitsActivity, "Reporting unit changed to: $selectedUnits", Toast.LENGTH_SHORT).show()
+                val selectedUnits = spinner.selectedItem.toString()
+                var command: String = ""
+                when (selectedUnits) {
+                    SpeedUnit.KPH.symbol -> {
+                        command = "UK"
+                    }
+
+                    SpeedUnit.MPH.symbol -> {
+                        command = "US"
+                    }
+
+                    SpeedUnit.MPS.symbol -> {
+                        command = "UM"
+                    }
+                    //else -> command = ""
                 }
 
-
+                val serialPort = try {
+                    UsbSerialPortService.getSerialPort()
+                } catch (e: IllegalStateException) {
+                    Log.e("myLog", "device not connected : $e", e)
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@SpeedUnitsActivity,
+                            "Device not connected!",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        delay(500)
+                        finish()
+                    }
+                    return@launch
+                }
+                try {
+                    UsbCommandManager.sendCommand(command, serialPort)
+                } catch (e: Exception) {
+                    Log.e("myLog", "Failed to send command: $e", e)
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@SpeedUnitsActivity,
+                            "Failed to send command.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        finish()
+                        delay(500)
+                    }
+                    return@launch
+                }
                 withContext(Dispatchers.Main) {
-                val resultIntent = Intent()
-            resultIntent.putExtra(SELECTED_UNITS, selectedUnits)
-            resultIntent.putExtra(OPTION_TYPE, OPTION_UNITS)
-            setResult(RESULT_OK, resultIntent)
-            finish()
-            }}
+                    Toast.makeText(
+                        this@SpeedUnitsActivity,
+                        "Reporting unit changed to: $selectedUnits",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    val resultIntent = Intent()
+                    resultIntent.putExtra(SELECTED_UNITS, selectedUnits)
+                    resultIntent.putExtra(OPTION_TYPE, OPTION_UNITS)
+                    setResult(RESULT_OK, resultIntent)
+                    finish()
+                }
+            }
         }
     }
+
     companion object {
-        const val  SELECTED_UNITS= "selected_units"
+        const val SELECTED_UNITS = "selected_units"
         const val OPTION_UNITS = "units"
-        const val  SPEED_UNITS= "speed_units"
+        const val SPEED_UNITS = "speed_units"
     }
 }
