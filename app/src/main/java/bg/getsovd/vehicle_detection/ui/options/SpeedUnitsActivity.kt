@@ -6,6 +6,7 @@ import android.util.Log
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.Spinner
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import bg.getsovd.vehicle_detection.R
 import bg.getsovd.vehicle_detection.model.SpeedUnit
@@ -58,6 +59,11 @@ class SpeedUnitsActivity: AppCompatActivity() {
             catch (e:Exception){
                 Log.e("myLog",e.toString())
             }
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@SpeedUnitsActivity, "Reporting unit changed to: $selectedUnits", Toast.LENGTH_SHORT).show()
+                }
+
+
                 withContext(Dispatchers.Main) {
                 val resultIntent = Intent()
             resultIntent.putExtra(SELECTED_UNITS, selectedUnits)
