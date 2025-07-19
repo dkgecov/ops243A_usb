@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.graphics.Matrix
 import android.hardware.usb.UsbDevice
 import android.hardware.usb.UsbManager
@@ -20,6 +21,10 @@ import android.service.controls.ControlsProviderService.TAG
 import android.util.Log
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
+import android.view.WindowInsets
+import android.view.WindowInsetsController
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.PopupMenu
 import android.widget.TextView
@@ -215,6 +220,14 @@ class MainActivity : ComponentActivity() {
                         optionsLauncher.launch(intent)
                         true
                     }
+                    R.id.option_3 -> {
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            showBlackoutOverlay()
+                            reduceBrightness()
+                        }, 200)
+                        true
+                    }
+
                     else -> false
                 }
             }
@@ -559,5 +572,34 @@ class MainActivity : ComponentActivity() {
         val match = regex.find(text)
         return match?.value?.toFloatOrNull() ?: 0f
     }
+
+    private fun showBlackoutOverlay() {
+        val blackoutView = findViewById<View>(R.id.blackout_overlay)
+        blackoutView.visibility = View.VISIBLE
+        // Hide system bars
+        window.insetsController?.let { controller ->
+            controller.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
+            controller.systemBarsBehavior =
+                WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE}
+        window.attributes = window.attributes.apply {
+            screenBrightness = 0f
+        }
+        // Dim screen
+        blackoutView.setOnClickListener {
+            blackoutView.visibility = View.GONE
+            blackoutView.setOnTouchListener(null)
+            window.insetsController?.show(
+                WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars()
+            )
+        }
+    }
+
+    private fun reduceBrightness(){
+        val layoutParams = window.attributes
+        layoutParams.screenBrightness = 0f  // 0f = dimmest
+        window.attributes = layoutParams
+
+    }
+
 
 }

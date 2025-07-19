@@ -98,4 +98,11 @@
             android:textColor="@android:color/white"
             android:textSize="30dp" />
     </LinearLayout>
+    <FrameLayout
+        android:id="@+id/blackout_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#000000"
+        android:elevation="100dp"
+        android:visibility="gone" />
 </FrameLayout>
