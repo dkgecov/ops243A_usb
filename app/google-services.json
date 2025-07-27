@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "138395592910",
+    "project_id": "topspeedbg-6cd03",
+    "storage_bucket": "topspeedbg-6cd03.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:138395592910:android:0bc6d4df27b1a31ad5089f",
+        "android_client_info": {
+          "package_name": "bg.getsovd.vehicle_detection"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAHzqbkRsiCSyN39ObRTuDaFcNPEMvnvao"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -18,6 +18,6 @@ object OverlayUtils {
         }
         val unitSymbol = TrackingData.currentSpeedUnits?.symbol ?: ""
         val speedToDisplay = speed?:0f
-        return "Time: $time\nSpeed: %.1f %s\n$locationText".format(speedToDisplay, unitSymbol)
+        return "Time: $time\nMax speed: %.1f %s\n$locationText".format(speedToDisplay, unitSymbol)
     }
 }

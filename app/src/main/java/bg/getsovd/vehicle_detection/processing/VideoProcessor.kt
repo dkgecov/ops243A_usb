@@ -62,13 +62,14 @@ class VideoProcessor (private val videoCapture: VideoCapture<Recorder>,
                     is VideoRecordEvent.Finalize -> {
                         Log.d("CameraX", "Video saved: ${file.absolutePath}")
                         isRecording = false // ✅ Release the flag here
+                        Log.d("MyLog","recent speeds:"+recentSpeeds.toString())
+                        Log.d("capturetimeEnd", System.nanoTime().toString())
 
                         CoroutineScope(Dispatchers.IO).launch {
                             try {
-                                val overlayOutputFile = File(outputDir, "VID_OVERLAY_${System.currentTimeMillis()}.mp4")
-                                Log.d("MyLog","recent speeds:"+recentSpeeds.toString())
-                                Log.d("capturetimeEnd", System.nanoTime().toString())
-                                val textToBurn = OverlayUtils.buildOverlay(recentSpeeds.maxByOrNull { kotlin.math.abs(it)})
+                                val maxSpeed = recentSpeeds.maxByOrNull { kotlin.math.abs(it)}
+                                val overlayOutputFile = File(outputDir, "Speeder_${maxSpeed}_${System.nanoTime()/1000}.mp4")
+                                val textToBurn = OverlayUtils.buildOverlay(maxSpeed)
                                 val lines = textToBurn.split("\n")
                                 Log.d("FFmpeg","Element after split:"+lines.get(0)+","+lines.get(1)+","+lines.get(2))
                                 val safeLines=escapeLinesForFfmpegDrawtext(lines)

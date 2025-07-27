@@ -37,6 +37,7 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "cameraView" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "cameraLifecycle" }
+firebase-storage = { group = "com.google.firebase", name = "firebase-storage-ktx", version = "20.3.0" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
