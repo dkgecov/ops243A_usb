@@ -69,9 +69,10 @@ dependencies {
     implementation ("com.mrljdx:ffmpeg-kit-full:6.0")
     implementation ("com.google.android.gms:play-services-location:21.0.1")
     implementation("com.google.guava:guava:32.1.2-jre")
-    implementation ("com.google.firebase:firebase-storage:20.3.0")
-    implementation ("com.google.firebase:firebase-auth:22.3.1")
-    implementation ("com.google.firebase:firebase-messaging:23.4.1") // Optional, if you want notifications later
-    implementation(libs.firebase.storage)
+    implementation(platform(libs.firebase.bom))
+    implementation("com.google.firebase:firebase-storage-ktx")
+    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation ("com.google.firebase:firebase-messaging") // Optional, if you want notifications later
+
 
 }

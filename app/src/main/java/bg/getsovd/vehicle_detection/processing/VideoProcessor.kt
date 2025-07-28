@@ -9,8 +9,11 @@ import androidx.camera.video.Recorder
 import androidx.camera.video.Recording
 import androidx.camera.video.VideoCapture
 import androidx.camera.video.VideoRecordEvent
+import androidx.core.net.toUri
 import bg.getsovd.vehicle_detection.config.AppConfig
 import bg.getsovd.vehicle_detection.config.AppConfig.VIDEO_DURATION_MS
+import bg.getsovd.vehicle_detection.utils.FirebaseAuthManager
+import bg.getsovd.vehicle_detection.utils.FirebaseUploader
 import bg.getsovd.vehicle_detection.utils.OverlayUtils
 import bg.getsovd.vehicle_detection.utils.StorageUtils
 import kotlinx.coroutines.CoroutineScope
@@ -19,6 +22,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.arthenica.ffmpegkit.FFmpegKit
 import com.arthenica.ffmpegkit.ReturnCode
+import com.google.android.gms.tasks.Tasks.await
 import java.io.File
 import java.io.FileOutputStream
 import java.util.Queue
@@ -80,6 +84,26 @@ class VideoProcessor (private val videoCapture: VideoCapture<Recorder>,
                                     lines = safeLines
                                 )
                                 Log.d("FFmpeg", "Overlay processing started.")
+                                delay(1000)
+                                FirebaseAuthManager.signInAnonymously { success, error ->
+                                    if (success) {
+                                        FirebaseUploader.uploadVideo(overlayOutputFile.toUri(), { downloadUrl ->
+                                            if (downloadUrl != null) {
+                                                // Upload succeeded, you have the download URL
+                                                Log.d("Upload", "Video uploaded successfully: $downloadUrl")
+                                                // e.g., update UI, save URL to database, share link, notify user, etc.
+                                            } else {
+                                                // Upload failed
+                                                Log.e("Upload", "Video upload failed")
+                                                // e.g., show error message to user
+                                            }
+                                        })
+                                    } else {
+                                        Log.e("Auth", "auth failed",error)
+                                        // handle auth error
+                                    }
+                                }
+
                             } catch (e: Exception) {
                                 Log.e("FFmpeg", "Failed to burn overlay", e)
                             }

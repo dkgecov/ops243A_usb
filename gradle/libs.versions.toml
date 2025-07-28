@@ -15,6 +15,7 @@ cameraView = "1.4.2"
 appcompat = "1.7.0"
 cameraLifecycle = "1.4.2"
 
+
 [libraries]
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "cameraCamera2" }
 androidx-camera-core = { module = "androidx.camera:camera-core", version.ref = "cameraCamera2" }
@@ -37,11 +38,9 @@ androidx-material3 = { group = "androidx.compose.material3", name = "material3" 
 androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "cameraView" }
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "cameraLifecycle" }
-firebase-storage = { group = "com.google.firebase", name = "firebase-storage-ktx", version = "20.3.0" }
-
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version = "34.0.0" }
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 google-services = { id = "com.google.gms.google-services", version = "4.4.3" }
-
