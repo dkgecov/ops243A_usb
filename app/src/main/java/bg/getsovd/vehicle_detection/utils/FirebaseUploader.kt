@@ -1,10 +1,11 @@
 package bg.getsovd.vehicle_detection.utils
 
-import android.content.Context
 import android.net.Uri
 import android.util.Log
 import com.google.firebase.Firebase
-
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.storage.StorageReference
+import com.google.firebase.storage.storage
 
 
 import java.io.File
@@ -20,7 +21,6 @@ object FirebaseUploader {
      * @param onComplete: callback with the download URL string or null if failed
      */
     fun uploadVideo(
-      //  context: Context,
         videoUri: Uri,
         onComplete: (downloadUrl: String?) -> Unit
     ) {

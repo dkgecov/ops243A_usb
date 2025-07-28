@@ -70,8 +70,8 @@ dependencies {
     implementation ("com.google.android.gms:play-services-location:21.0.1")
     implementation("com.google.guava:guava:32.1.2-jre")
     implementation(platform(libs.firebase.bom))
-    implementation("com.google.firebase:firebase-storage-ktx")
-    implementation("com.google.firebase:firebase-auth-ktx")
+    implementation("com.google.firebase:firebase-storage")
+    implementation("com.google.firebase:firebase-auth")
     implementation ("com.google.firebase:firebase-messaging") // Optional, if you want notifications later
 
 

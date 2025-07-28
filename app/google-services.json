@@ -12,7 +12,20 @@
           "package_name": "bg.getsovd.vehicle_detection"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "138395592910-eotrqlehq73fgmnifa52e1v2nme5j27s.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "bg.getsovd.vehicle_detection",
+            "certificate_hash": "45fc417fdc7ce2025c0330a4af803366f21cfef9"
+          }
+        },
+        {
+          "client_id": "138395592910-culliu9ug09dovha92s5suf14g2sehr5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAHzqbkRsiCSyN39ObRTuDaFcNPEMvnvao"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "138395592910-culliu9ug09dovha92s5suf14g2sehr5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
