@@ -3,6 +3,8 @@ package bg.getsovd.vehicle_detection.processing
 import android.os.Handler
 import android.util.Log
 import bg.getsovd.vehicle_detection.usb.UsbDataParsers
+import bg.getsovd.vehicle_detection.utils.TrackingData
+import kotlin.math.cos
 
 private const val CR = 13.toByte()  // Carriage Return
 private const val LF = 10.toByte()  // Line Feed
@@ -11,6 +13,7 @@ class SpeedDataHandler (
     private val onSpeedUpdate: (String) -> Unit,
     private val shouldCapture: (Float) -> Boolean,
     private val onCapture: (Float) -> Unit,
+    private val getObjectsAngle: () -> Float
 ) : SensorDataConsumer {
     @Volatile
     private var updateScheduled = false
@@ -29,15 +32,24 @@ class SpeedDataHandler (
     }
 
     private fun processLine(line: String) {
+        Log.d("angle", getObjectsAngle().toString())
         updateScheduled = true
         Log.d("myLog", "processing line: " + line)
+
+        val measuredSpeed = extractFirstNumber(line);
+        val realSpeed = ((applyCosineError(measuredSpeed!!,getObjectsAngle()) * 100).toInt() / 100f)
+        Log.d("angle","measured"+measuredSpeed+"..."+"real:"+realSpeed)
+        val displayText = buildString {
+            append(realSpeed)
+            append(' ')
+            append(TrackingData.currentSpeedUnits!!.symbol)//TODO make null safe
+        }
         uiHandler.post {
-            onSpeedUpdate(line)
+            onSpeedUpdate(displayText)
             updateScheduled = false
         }
-        val speed = extractFirstNumber(line);
-        if (speed != null && shouldCapture(speed)) {
-            onCapture(speed)
+        if (realSpeed != null && shouldCapture(realSpeed)) {
+            onCapture(realSpeed)
         }
     }
 
@@ -60,8 +72,12 @@ class SpeedDataHandler (
             }
         }
 
-        return sb.toString().toFloatOrNull()
+        return sb.toString().toFloatOrNull()//TODO return 0
     }
 
+private fun applyCosineError(measuredSpeed:Float, objectsAngle: Float): Double {
+    val realSpeed = measuredSpeed/cos(Math.toRadians(objectsAngle.toDouble()))
 
+    return realSpeed;
+}
 }

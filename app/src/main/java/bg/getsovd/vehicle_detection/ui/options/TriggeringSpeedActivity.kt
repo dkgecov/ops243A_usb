@@ -22,7 +22,7 @@ class TriggeringSpeedActivity : AppCompatActivity() {
     }
     private fun setupThresholdUI() {
         setContentView(R.layout.dialog_threshold)
-        var triggerSpeed=intent.getFloatExtra(DEFAULT_TRIGGER_SPEED, AppConfig.DEFAULT_TRIGGER_SPEED)
+        var triggerSpeed=intent.getFloatExtra(DEFAULT_TRIGGER_SPEED, AppConfig.DEFAULT_TRIGGER_SPEED) // get from app global object if not present in the intent
         val thresholdSeekBar = findViewById<SeekBar>(R.id.thresholdSeekBar)
         val thresholdLabel = findViewById<TextView>(R.id.thresholdLabel)
         val saveButton = findViewById<Button>(R.id.saveButton)
@@ -60,8 +60,10 @@ class TriggeringSpeedActivity : AppCompatActivity() {
     companion object {
         const val OPTION_TYPE = "option_type"
         const val OPTION_TRIGGER_SPEED = "trigger_speed"
+        const val OPTION_COSINE_ERROR = "cosine_error"
         const val OPTION_UNITS = "units"
         const val DEFAULT_TRIGGER_SPEED = "default_trigger_speed"
         const val SELECTED_TRIGGER_SPEED = "selected_trigger_speed"
+        const val SELECTED_OBJECTS_ANGLE = "selected_objects_angle"
     }
 }

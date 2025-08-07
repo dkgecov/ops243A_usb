@@ -41,6 +41,7 @@ import androidx.lifecycle.lifecycleScope
 import bg.getsovd.vehicle_detection.R
 import bg.getsovd.vehicle_detection.camera.CameraServiceImpl
 import bg.getsovd.vehicle_detection.config.AppConfig.CAMERA_STARTUP_LATENCY_MS
+import bg.getsovd.vehicle_detection.config.AppConfig.DEFAULT_OBJECTS_ANGLE
 import bg.getsovd.vehicle_detection.config.AppConfig.DEFAULT_TRIGGER_SPEED
 import bg.getsovd.vehicle_detection.config.AppConfig.OVERLAY_UPDATES_INTERVAL_MS
 import bg.getsovd.vehicle_detection.config.AppConfig.VIDEO_DURATION_MS
@@ -53,6 +54,7 @@ import bg.getsovd.vehicle_detection.usb.UsbSerialPortService
 import bg.getsovd.vehicle_detection.model.BoundingBoxOverlay
 import bg.getsovd.vehicle_detection.model.InferenceResult
 import bg.getsovd.vehicle_detection.model.MessageType
+import bg.getsovd.vehicle_detection.ui.options.CosineError
 import bg.getsovd.vehicle_detection.ui.options.SpeedUnitsActivity
 import bg.getsovd.vehicle_detection.usb.UsbCommandManager
 import bg.getsovd.vehicle_detection.usb.UsbDataDispatcher
@@ -85,6 +87,7 @@ private const val CHECK_UNITS_COMMAND = "U?"
 class MainActivity : ComponentActivity() {
     private var overlayUpdateJob: Job? = null
     private var triggerSpeed = DEFAULT_TRIGGER_SPEED
+    private var objectsAngle = 0F
     private lateinit var recentSpeedData: Queue<Float>
     private lateinit var optionsLauncher: ActivityResultLauncher<Intent>
     private val uiHandler: Handler = Handler(Looper.getMainLooper())
@@ -175,7 +178,8 @@ class MainActivity : ComponentActivity() {
         messageDisplayer= MessageDisplayer(infoTextView,uiHandler)
         val optionsButton = findViewById<Button>(R.id.optionsButton)
         val sharedPref = getSharedPreferences("AppPrefs", MODE_PRIVATE)
-        triggerSpeed = sharedPref.getFloat("TRIGGER_SPEED", DEFAULT_TRIGGER_SPEED)
+        triggerSpeed = sharedPref.getFloat("TRIGGER_SPEED", DEFAULT_TRIGGER_SPEED)// if no shared pref use the AppConfig object
+        objectsAngle = sharedPref.getFloat("OBJECTS_ANGLE", DEFAULT_OBJECTS_ANGLE)
 
         checkAndRequestLocationPermission()
         // register launcher
@@ -190,6 +194,10 @@ class MainActivity : ComponentActivity() {
                     TriggeringSpeedActivity.OPTION_TRIGGER_SPEED -> {
                         val selectedSpeed = data.getFloatExtra(TriggeringSpeedActivity.SELECTED_TRIGGER_SPEED, DEFAULT_TRIGGER_SPEED)
                         triggerSpeed = selectedSpeed
+                    }
+                    TriggeringSpeedActivity.OPTION_COSINE_ERROR ->{
+                        val selectedObjectsAngle = data.getFloatExtra(TriggeringSpeedActivity.SELECTED_OBJECTS_ANGLE, DEFAULT_TRIGGER_SPEED)
+                        objectsAngle = selectedObjectsAngle
                     }
                     TriggeringSpeedActivity.OPTION_UNITS -> {
                         val newUnits = data.getStringExtra(SpeedUnitsActivity.SELECTED_UNITS)
@@ -225,6 +233,13 @@ class MainActivity : ComponentActivity() {
                             showBlackoutOverlay()
                             reduceBrightness()
                         }, 200)
+                        true
+                    }
+                    R.id.option_4 -> {
+                        val intent = Intent(this, CosineError::class.java)
+                        intent.putExtra(TriggeringSpeedActivity.OPTION_TYPE, CosineError.COSINE_ERROR)
+                        intent.putExtra(CosineError.DEFAULT_OBJECTS_ANGLE, objectsAngle)
+                        optionsLauncher.launch(intent)
                         true
                     }
 
@@ -436,7 +451,8 @@ class MainActivity : ComponentActivity() {
                     onCapture = {
                         Log.d("capturetimeStart", System.nanoTime().toString())
                         cameraServiceImpl.startRecording(hasAudioPermission(), recentSpeedData)
-                    }
+                    },
+                    { objectsAngle}
                 )
 
                 UsbDataDispatcher.registerConsumer(speedHandler)
