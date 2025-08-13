@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item
-        android:id="@+id/option_1"
+        android:id="@+id/threshold"
         android:title="Set Threshold" />
     <item
-        android:id="@+id/option_2"
+        android:id="@+id/speed_units"
         android:title="Set speed units" />
     <item
-        android:id="@+id/option_3"
+        android:id="@+id/power_save_mode"
         android:title="Power save mode" />
     <item
-        android:id="@+id/option_4"
+        android:id="@+id/cosine_error_correction"
         android:title="Cosine error correction" />
 </menu>

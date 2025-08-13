@@ -223,28 +223,28 @@ class MainActivity : ComponentActivity() {
             popupMenu.menuInflater.inflate(R.menu.options_menu, popupMenu.menu)
             popupMenu.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
-                    R.id.option_1 -> {
+                    R.id.threshold -> {
                         val intent = Intent(this, TriggeringSpeedActivity::class.java)
                         intent.putExtra(OPTION_TYPE, OPTION_TRIGGER_SPEED)
                         intent.putExtra(AppConstants.DEFAULT_TRIGGER_SPEED, triggerSpeed)
                         optionsLauncher.launch(intent)
                         true
                     }
-                    R.id.option_2 -> {
+                    R.id.speed_units -> {
                         // Handle units
                         val intent = Intent(this, SpeedUnitsActivity::class.java)
                         intent.putExtra(OPTION_TYPE,OPTION_UNITS)
                         optionsLauncher.launch(intent)
                         true
                     }
-                    R.id.option_3 -> {
+                    R.id.power_save_mode -> {
                         Handler(Looper.getMainLooper()).postDelayed({
                             showBlackoutOverlay()
                             reduceBrightness()
                         }, 200)
                         true
                     }
-                    R.id.option_4 -> {
+                    R.id.cosine_error_correction -> {
                         val intent = Intent(this, CosineError::class.java)
                         intent.putExtra(OPTION_TYPE, COSINE_ERROR)
                         intent.putExtra(AppConstants.DEFAULT_OBJECTS_ANGLE, objectsAngle)
