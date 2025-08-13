@@ -60,6 +60,15 @@ import bg.getsovd.vehicle_detection.usb.UsbCommandManager
 import bg.getsovd.vehicle_detection.usb.UsbDataDispatcher
 import bg.getsovd.vehicle_detection.usb.exceptions.InvalidSpeedUnitException
 import bg.getsovd.vehicle_detection.usb.exceptions.NoDeviceResponseException
+import bg.getsovd.vehicle_detection.utils.AppConstants
+import bg.getsovd.vehicle_detection.utils.AppConstants.COSINE_ERROR
+import bg.getsovd.vehicle_detection.utils.AppConstants.OPTION_COSINE_ERROR
+import bg.getsovd.vehicle_detection.utils.AppConstants.OPTION_TRIGGER_SPEED
+import bg.getsovd.vehicle_detection.utils.AppConstants.OPTION_TYPE
+import bg.getsovd.vehicle_detection.utils.AppConstants.OPTION_UNITS
+import bg.getsovd.vehicle_detection.utils.AppConstants.SELECTED_OBJECTS_ANGLE
+import bg.getsovd.vehicle_detection.utils.AppConstants.SELECTED_TRIGGER_SPEED
+import bg.getsovd.vehicle_detection.utils.AppConstants.SELECTED_UNITS
 import bg.getsovd.vehicle_detection.utils.TrackingData
 import bg.getsovd.vehicle_detection.utils.MessageDisplayer
 import bg.getsovd.vehicle_detection.utils.OverlayUtils
@@ -188,19 +197,19 @@ class MainActivity : ComponentActivity() {
         ) { result ->
             if (result.resultCode == RESULT_OK) {
                 val data = result.data
-                val optionType = data?.getStringExtra(TriggeringSpeedActivity.OPTION_TYPE)
+                val optionType = data?.getStringExtra(OPTION_TYPE)
 
                 when (optionType) {
-                    TriggeringSpeedActivity.OPTION_TRIGGER_SPEED -> {
-                        val selectedSpeed = data.getFloatExtra(TriggeringSpeedActivity.SELECTED_TRIGGER_SPEED, DEFAULT_TRIGGER_SPEED)
+                    OPTION_TRIGGER_SPEED -> {
+                        val selectedSpeed = data.getFloatExtra(SELECTED_TRIGGER_SPEED, DEFAULT_TRIGGER_SPEED)
                         triggerSpeed = selectedSpeed
                     }
-                    TriggeringSpeedActivity.OPTION_COSINE_ERROR ->{
-                        val selectedObjectsAngle = data.getFloatExtra(TriggeringSpeedActivity.SELECTED_OBJECTS_ANGLE, DEFAULT_TRIGGER_SPEED)
+                    OPTION_COSINE_ERROR ->{
+                        val selectedObjectsAngle = data.getFloatExtra(SELECTED_OBJECTS_ANGLE, DEFAULT_OBJECTS_ANGLE)
                         objectsAngle = selectedObjectsAngle
                     }
-                    TriggeringSpeedActivity.OPTION_UNITS -> {
-                        val newUnits = data.getStringExtra(SpeedUnitsActivity.SELECTED_UNITS)
+                   OPTION_UNITS -> {
+                        val newUnits = data.getStringExtra(SELECTED_UNITS)
                         TrackingData.currentSpeedUnits = SpeedUnit.entries.find { it.symbol == newUnits }!!//TODO check for mismatch if blank returned
                     }
                     // add more cases if needed
@@ -216,15 +225,15 @@ class MainActivity : ComponentActivity() {
                 when (item.itemId) {
                     R.id.option_1 -> {
                         val intent = Intent(this, TriggeringSpeedActivity::class.java)
-                        intent.putExtra(TriggeringSpeedActivity.OPTION_TYPE, TriggeringSpeedActivity.OPTION_TRIGGER_SPEED)
-                        intent.putExtra(TriggeringSpeedActivity.DEFAULT_TRIGGER_SPEED, triggerSpeed)
+                        intent.putExtra(OPTION_TYPE, OPTION_TRIGGER_SPEED)
+                        intent.putExtra(AppConstants.DEFAULT_TRIGGER_SPEED, triggerSpeed)
                         optionsLauncher.launch(intent)
                         true
                     }
                     R.id.option_2 -> {
                         // Handle units
                         val intent = Intent(this, SpeedUnitsActivity::class.java)
-                        intent.putExtra(TriggeringSpeedActivity.OPTION_TYPE, TriggeringSpeedActivity.OPTION_UNITS)
+                        intent.putExtra(OPTION_TYPE,OPTION_UNITS)
                         optionsLauncher.launch(intent)
                         true
                     }
@@ -237,8 +246,8 @@ class MainActivity : ComponentActivity() {
                     }
                     R.id.option_4 -> {
                         val intent = Intent(this, CosineError::class.java)
-                        intent.putExtra(TriggeringSpeedActivity.OPTION_TYPE, CosineError.COSINE_ERROR)
-                        intent.putExtra(CosineError.DEFAULT_OBJECTS_ANGLE, objectsAngle)
+                        intent.putExtra(OPTION_TYPE, COSINE_ERROR)
+                        intent.putExtra(AppConstants.DEFAULT_OBJECTS_ANGLE, objectsAngle)
                         optionsLauncher.launch(intent)
                         true
                     }

@@ -8,6 +8,10 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import bg.getsovd.vehicle_detection.R
 import bg.getsovd.vehicle_detection.config.AppConfig
+import bg.getsovd.vehicle_detection.utils.AppConstants.DEFAULT_TRIGGER_SPEED
+import bg.getsovd.vehicle_detection.utils.AppConstants.OPTION_TRIGGER_SPEED
+import bg.getsovd.vehicle_detection.utils.AppConstants.OPTION_TYPE
+import bg.getsovd.vehicle_detection.utils.AppConstants.SELECTED_TRIGGER_SPEED
 
 private const val TRIGGER_SPEED = "TRIGGER_SPEED"
 private const val SPEED = "speed:"
@@ -58,12 +62,6 @@ class TriggeringSpeedActivity : AppCompatActivity() {
     }
 
     companion object {
-        const val OPTION_TYPE = "option_type"
-        const val OPTION_TRIGGER_SPEED = "trigger_speed"
-        const val OPTION_COSINE_ERROR = "cosine_error"
-        const val OPTION_UNITS = "units"
-        const val DEFAULT_TRIGGER_SPEED = "default_trigger_speed"
-        const val SELECTED_TRIGGER_SPEED = "selected_trigger_speed"
-        const val SELECTED_OBJECTS_ANGLE = "selected_objects_angle"
+
     }
 }

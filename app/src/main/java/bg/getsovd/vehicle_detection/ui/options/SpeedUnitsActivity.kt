@@ -10,13 +10,11 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import bg.getsovd.vehicle_detection.R
 import bg.getsovd.vehicle_detection.model.SpeedUnit
-import bg.getsovd.vehicle_detection.ui.options.TriggeringSpeedActivity.Companion.OPTION_TRIGGER_SPEED
-import bg.getsovd.vehicle_detection.ui.options.TriggeringSpeedActivity.Companion.OPTION_TYPE
-import bg.getsovd.vehicle_detection.ui.options.TriggeringSpeedActivity.Companion.OPTION_UNITS
-import bg.getsovd.vehicle_detection.ui.options.TriggeringSpeedActivity.Companion.SELECTED_TRIGGER_SPEED
 import bg.getsovd.vehicle_detection.usb.UsbCommandManager
 import bg.getsovd.vehicle_detection.usb.UsbSerialPortService
-import com.hoho.android.usbserial.driver.UsbSerialPort
+import bg.getsovd.vehicle_detection.utils.AppConstants.OPTION_TYPE
+import bg.getsovd.vehicle_detection.utils.AppConstants.OPTION_UNITS
+import bg.getsovd.vehicle_detection.utils.AppConstants.SELECTED_UNITS
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -111,9 +109,4 @@ class SpeedUnitsActivity : AppCompatActivity() {
         }
     }
 
-    companion object {
-        const val SELECTED_UNITS = "selected_units"
-        const val OPTION_UNITS = "units"
-        const val SPEED_UNITS = "speed_units"
-    }
 }

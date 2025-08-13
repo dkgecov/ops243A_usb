@@ -7,9 +7,10 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import bg.getsovd.vehicle_detection.R
 import bg.getsovd.vehicle_detection.config.AppConfig
-import bg.getsovd.vehicle_detection.ui.options.TriggeringSpeedActivity.Companion.OPTION_COSINE_ERROR
-import bg.getsovd.vehicle_detection.ui.options.TriggeringSpeedActivity.Companion.OPTION_TYPE
-import bg.getsovd.vehicle_detection.ui.options.TriggeringSpeedActivity.Companion.SELECTED_OBJECTS_ANGLE
+import bg.getsovd.vehicle_detection.utils.AppConstants.DEFAULT_OBJECTS_ANGLE
+import bg.getsovd.vehicle_detection.utils.AppConstants.OPTION_COSINE_ERROR
+import bg.getsovd.vehicle_detection.utils.AppConstants.OPTION_TYPE
+import bg.getsovd.vehicle_detection.utils.AppConstants.SELECTED_OBJECTS_ANGLE
 
 
 private const val objectsToSensorAngle = "objects to sensor angle:"
@@ -62,8 +63,7 @@ class CosineError : AppCompatActivity(){
         })
     }
     companion object {
-        const val COSINE_ERROR = "cosine_error"
-        const val DEFAULT_OBJECTS_ANGLE = "default_cosine_angle"
+
 
     }
 }
