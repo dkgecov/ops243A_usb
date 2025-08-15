@@ -19,7 +19,7 @@ class SpeedDataHandler (
     private var updateScheduled = false
 
     @Synchronized
-    override fun handleNewData(line: String?) {//TODO Wifi case may not accept ByteArray
+    override fun handleNewData(line: String?) {
         if (!updateScheduled) {
             if (line != null) {
                 processLine(line)
@@ -37,7 +37,15 @@ class SpeedDataHandler (
         Log.d("myLog", "processing line: " + line)
 
         val measuredSpeed = extractFirstNumber(line);
-        val realSpeed = ((applyCosineError(measuredSpeed!!,getObjectsAngle()) * 100).toInt() / 100f)
+        if(measuredSpeed==null){
+            Log.w("SpeedCalculation", "Speed parse failed from USB data: $line")
+            uiHandler.post {
+                onSpeedUpdate("N/A")
+                updateScheduled = false
+            }
+            return
+        }
+        val realSpeed = ((applyCosineError(measuredSpeed,getObjectsAngle()) * 100).toInt() / 100f)
         Log.d("angle","measured"+measuredSpeed+"..."+"real:"+realSpeed)
         val displayText = buildString {
             append(realSpeed)
@@ -72,7 +80,7 @@ class SpeedDataHandler (
             }
         }
 
-        return sb.toString().toFloatOrNull()//TODO return 0
+        return sb.toString().toFloatOrNull()
     }
 
 private fun applyCosineError(measuredSpeed:Float, objectsAngle: Float): Double {

@@ -64,6 +64,9 @@ class VideoProcessor (private val videoCapture: VideoCapture<Recorder>,
                     }
 
                     is VideoRecordEvent.Finalize -> {
+                        val snapshotSpeeds = synchronized(recentSpeeds) {
+                            ArrayList(recentSpeeds)
+                        }
                         Log.d("CameraX", "Video saved: ${file.absolutePath}")
                         isRecording = false // ✅ Release the flag here
                         Log.d("MyLog","recent speeds:"+recentSpeeds.toString())
@@ -71,7 +74,7 @@ class VideoProcessor (private val videoCapture: VideoCapture<Recorder>,
 
                         CoroutineScope(Dispatchers.IO).launch {
                             try {
-                                val maxSpeed = recentSpeeds.maxByOrNull { kotlin.math.abs(it)}
+                                val maxSpeed = snapshotSpeeds.maxByOrNull { kotlin.math.abs(it)}
                                 val overlayOutputFile = File(outputDir, "Speeder_${maxSpeed}_${System.nanoTime()/1000}.mp4")
                                 val textToBurn = OverlayUtils.buildOverlay(maxSpeed)
                                 val lines = textToBurn.split("\n")
