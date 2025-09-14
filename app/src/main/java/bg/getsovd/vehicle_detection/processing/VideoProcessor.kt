@@ -80,7 +80,7 @@ class VideoProcessor (private val videoCapture: VideoCapture<Recorder>,
                                 val lines = textToBurn.split("\n")
                                 Log.d("FFmpeg","Element after split:"+lines.get(0)+","+lines.get(1)+","+lines.get(2))
                                 val safeLines=escapeLinesForFfmpegDrawtext(lines)
-                                burnOverlayToVideo(
+                                burnOverlayToVideo(//TODO make callback instead of wait 1000
                                     inputFile = file,
                                     outputFile = overlayOutputFile,
                                     fontPath =  copyFontFromAssets(context, "Roboto-Regular.ttf"),

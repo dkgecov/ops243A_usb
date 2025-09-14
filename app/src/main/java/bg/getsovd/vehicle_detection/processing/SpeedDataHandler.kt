@@ -18,7 +18,7 @@ class SpeedDataHandler (
     @Volatile
     private var updateScheduled = false
 
-    @Synchronized
+    @Synchronized // two threads can enter it because the coroutines can be scheduled on different threads
     override fun handleNewData(line: String?) {
         if (!updateScheduled) {
             if (line != null) {
@@ -50,13 +50,13 @@ class SpeedDataHandler (
         val displayText = buildString {
             append(realSpeed)
             append(' ')
-            append(TrackingData.currentSpeedUnits!!.symbol)//TODO make null safe
+            append(TrackingData.currentSpeedUnits?.symbol ?: "")
         }
         uiHandler.post {
             onSpeedUpdate(displayText)
             updateScheduled = false
         }
-        if (realSpeed != null && shouldCapture(realSpeed)) {
+        if (shouldCapture(realSpeed)) {
             onCapture(realSpeed)
         }
     }

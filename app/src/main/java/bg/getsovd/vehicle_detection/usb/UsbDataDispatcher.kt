@@ -43,7 +43,7 @@ object UsbDataDispatcher : SerialInputOutputManager.Listener  {
 
     private fun dispatchLine(line: String) {
         consumers.forEach {
-            if (it.isDataSuitable(line)) {// Sometimes the order of speed data consuming can be messesd but not a big deal
+            if (it.isDataSuitable(line)) {// Sometimes the order of speed data consuming can be messed but not a big deal
                 CoroutineScope(Dispatchers.Default).launch {
                     it.handleNewData(line)
                 }

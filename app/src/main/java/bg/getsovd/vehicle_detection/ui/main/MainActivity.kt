@@ -83,6 +83,8 @@ import kotlinx.coroutines.CoroutineScope
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -114,6 +116,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var boundingBoxOverlay: BoundingBoxOverlay
     private var ACTION_USB_PERMISSION: String = "bg.getsovd.vehicle_detection.USB_PERMISSION"
     private var serialManager:SerialInputOutputManager?=null
+    private var usbScope: CoroutineScope? = null
     private val locationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -162,10 +165,11 @@ class MainActivity : ComponentActivity() {
                     Log.d("usbActions", "USB was detached")
                     messageDisplayer.showMessage("USB device detached!",MessageType.WARNING)
                     Log.d(TAG, "USB device detached")
+                    usbScope?.cancel() // 🚨 cancel the onpermission courotine to avoid call null port
+                    usbScope = null
                     UsbSerialPortService.close()
                     serialManager?.stop()
                     serialManager = null
-                    // TODO Optional: Clean up more resources here
                 }
             }
         }
@@ -449,7 +453,9 @@ class MainActivity : ComponentActivity() {
 
     @SuppressLint("MissingPermission")
     private fun onPermission(usbManager: UsbManager, usbDevice: UsbDevice) {
-        CoroutineScope(Dispatchers.IO).launch {
+        usbScope?.cancel()// handle rapid plug and unplug
+        usbScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        usbScope?.launch {
             try {
                 val speedHandler = SpeedDataHandler(
                     uiHandler = Handler(Looper.getMainLooper()),
@@ -506,8 +512,8 @@ class MainActivity : ComponentActivity() {
                 )
             }
 
-            val runtime = Runtime.getRuntime()
-            val usedMemory = runtime.totalMemory() - runtime.freeMemory()
+           // val runtime = Runtime.getRuntime()
+            //val usedMemory = runtime.totalMemory() - runtime.freeMemory()
            // println("Used memory: $usedMemory bytes")
            // messageDisplayer.showMessage(usedMemory.toString(),MessageType.WARNING,5000)
         }
