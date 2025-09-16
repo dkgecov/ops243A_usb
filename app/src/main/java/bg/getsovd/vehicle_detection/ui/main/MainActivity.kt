@@ -78,6 +78,7 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.common.collect.EvictingQueue
+import com.hoho.android.usbserial.driver.UsbSerialPort
 import com.hoho.android.usbserial.util.SerialInputOutputManager
 import kotlinx.coroutines.CoroutineScope
 
@@ -116,7 +117,6 @@ class MainActivity : ComponentActivity() {
     private lateinit var boundingBoxOverlay: BoundingBoxOverlay
     private var ACTION_USB_PERMISSION: String = "bg.getsovd.vehicle_detection.USB_PERMISSION"
     private var serialManager:SerialInputOutputManager?=null
-    private var usbScope: CoroutineScope? = null
     private val locationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
@@ -165,8 +165,6 @@ class MainActivity : ComponentActivity() {
                     Log.d("usbActions", "USB was detached")
                     messageDisplayer.showMessage("USB device detached!",MessageType.WARNING)
                     Log.d(TAG, "USB device detached")
-                    usbScope?.cancel() // 🚨 cancel the onpermission courotine to avoid call null port
-                    usbScope = null
                     UsbSerialPortService.close()
                     serialManager?.stop()
                     serialManager = null
@@ -453,10 +451,9 @@ class MainActivity : ComponentActivity() {
 
     @SuppressLint("MissingPermission")
     private fun onPermission(usbManager: UsbManager, usbDevice: UsbDevice) {
-        usbScope?.cancel()// handle rapid plug and unplug
-        usbScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-        usbScope?.launch {
-            try {
+
+        CoroutineScope(SupervisorJob() + Dispatchers.IO)
+        .launch {
                 val speedHandler = SpeedDataHandler(
                     uiHandler = Handler(Looper.getMainLooper()),
                     onSpeedUpdate = { speedTextView.text = it },
@@ -472,21 +469,19 @@ class MainActivity : ComponentActivity() {
 
                 UsbDataDispatcher.registerConsumer(speedHandler)
                 UsbDataDispatcher.registerConsumer(UsbCommandManager)
-
+            try {
                 val port = UsbSerialPortService.initializePort(usbDevice, usbManager)
                 UsbSerialPortService.flushStalePortData()
-                val manager = SerialInputOutputManager(port, UsbDataDispatcher)// use local variable to avoid null issues
+                val manager = SerialInputOutputManager(port, UsbDataDispatcher)// use local variable to avoid null issues with shared one
                 serialManager = manager
                 manager.start()
             } catch (e: Exception) {
                 Log.e("myLog", "Error initializing port or starting listener", e)
             }
 
-
+            Log.d("myLog", "will sync units")
             try {
-                val port = UsbSerialPortService.getSerialPort()
-                Log.d("myLog", "will sync units")
-                val response = UsbCommandManager. sendCommand(CHECK_UNITS_COMMAND, port)// calls suspend function here
+                val response = UsbCommandManager. sendCommand(CHECK_UNITS_COMMAND, UsbSerialPortService.getSerialPort())// calls suspend function here
                 Log.d("myLog", "response: $response")
                 val currentSpeedUnit = SpeedUnit.fromResponse(response)
                 TrackingData.currentSpeedUnits = currentSpeedUnit
@@ -510,6 +505,14 @@ class MainActivity : ComponentActivity() {
                             "This can lead to improper behaviour. Refer to the device user manual to check default units reporting",
                     MessageType.WARNING
                 )
+            }
+            catch (e: IllegalStateException) {
+                Log.e("myLog", "Serial port not available", e)
+                messageDisplayer.showMessage(
+                    "USB connection lost before retrieving device speed units.",
+                    MessageType.WARNING
+                )
+                return@launch
             }
 
            // val runtime = Runtime.getRuntime()

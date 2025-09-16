@@ -9,8 +9,8 @@ import com.hoho.android.usbserial.driver.UsbSerialProber
 import java.io.IOException
 
 object UsbSerialPortService {
-      private var serialPort: UsbSerialPort? =null//TODO null because of the clear method,may be make private
-    private  var connection: UsbDeviceConnection? =null
+    private var serialPort: UsbSerialPort? = null//null because of the clear method, lateinit can not be set back to null
+    private  var connection: UsbDeviceConnection? = null
 
     fun getSerialPort(): UsbSerialPort {
         return serialPort ?: throw IllegalStateException("Serial port not initialized")
